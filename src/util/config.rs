@@ -52,6 +52,7 @@ pub enum Verbosity {
     Error,
 }
 
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct Routes {
@@ -72,25 +73,24 @@ impl Default for Routes {
 
 impl Routes {
     pub fn with_base_prepend(&self) -> Self {
-        let normalized_base = if !self.base.ends_with('/') {
-            format!("{}/", self.base)
-        } else {
-            self.base.clone()
-        };
-
+        let normalized_base = self.normalize_slash(&self.base);
         Self {
             base: normalized_base.clone(),
-            public_home: format!(
-                "{}{}",
-                normalized_base,
-                self.public_home.trim_start_matches('/')
-            ),
-            public_error: format!(
-                "{}{}",
-                normalized_base,
-                self.public_error.trim_start_matches('/')
-            ),
+            public_home: self.join_paths(&normalized_base, &self.public_home),
+            public_error: self.join_paths(&normalized_base, &self.public_error),
         }
+    }
+
+    fn normalize_slash(&self, path: &str) -> String {
+        if !path.ends_with('/') {
+            format!("{}/", path)
+        } else {
+            path.to_string()
+        }
+    }
+
+    fn join_paths(&self, base: &str, path: &str) -> String {
+        format!("{}{}", base, path.trim_start_matches('/'))
     }
 }
 
