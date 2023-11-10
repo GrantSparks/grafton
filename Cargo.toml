@@ -19,17 +19,11 @@ include = [
 publish = false
 
 [dependencies]
-anyhow = "*"
-lazy_static = "*"
-regex = "*"
-serde_json = "*"
-tracing = "*"
-url = "*"
-
-[dependencies.figment]
-version = "*"
-features = ["env", "toml"]
-
-[dependencies.serde]
-version = "*"
-features = ["derive"]
+anyhow = { version = "*" }
+lazy_static = { version = "*" }
+regex = { version = "*" }
+serde_json = { version = "*" }
+tracing = { version = "*" }
+url = { version = "*" }
+figment = { version = "*", features = ["env", "toml"] }
+serde = { version = "*", features = ["derive"] }
