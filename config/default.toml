@@ -1,0 +1,14 @@
+# You can override these default settings with a local.toml file. 
+# You can also load even more overrides from a toml file with the same name as the run_mode.  e.g. dev.toml
+
+# To override run_mode you can define it in the RUN_MODE environment variable instead of here.  You can't override it using local.toml or any other file.
+run_mode = "dev"
+
+[website]
+bind_ports = { http = 8080 }
+public_ports = { http = 8080 }
+
+[session]
+
+[routes]
+

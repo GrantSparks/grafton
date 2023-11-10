@@ -1,0 +1,34 @@
+[package]
+name = "grafton-server"
+version = "0.1.0"
+edition = "2021"
+authors = ["Grant Sparks <grant@grafton.ai>"]
+description = "The Grafton Machine Shed API Server, written in Rust, serves multiple APIs, protocols, and services. It aims to provide a robust, efficient, and flexible platform for hosting a variety of internet-collaborating applications particularly with AI Agents and LLMs."
+homepage = "https://www.grafton.ai"
+repository = "https://github.com/GrantSparks/grafton"
+license = "Apache-2.0"
+keywords = ["api", "web", "http", "server", "networking", "ai"]
+categories = ["network-programming", "web-programming"]
+include = [
+    "config/default.toml",
+    "src/**/*",
+    "Cargo.toml",
+    "README.md",
+    "LICENSE",
+]
+publish = false
+
+[dependencies]
+anyhow = "*"
+lazy_static = "*"
+regex = "*"
+serde_json = "*"
+tracing = "*"
+
+[dependencies.figment]
+version = "*"
+features = ["env", "toml"]
+
+[dependencies.serde]
+version = "*"
+features = ["derive"]
