@@ -52,7 +52,6 @@ pub enum Verbosity {
     Error,
 }
 
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct Routes {
@@ -90,7 +89,9 @@ impl Routes {
     }
 
     fn join_paths(&self, base: &str, path: &str) -> String {
-        format!("{}{}", base, path.trim_start_matches('/'))
+        let trimmed_base = base.trim_end_matches('/');
+        let trimmed_path = path.trim_start_matches('/');
+        format!("{}/{}", trimmed_base, trimmed_path)
     }
 }
 
@@ -384,5 +385,50 @@ mod tests {
             website.format_public_server_url("/api"),
             "http://example.com:8080/api"
         );
+    }
+
+    #[test]
+    fn test_routes_deserialization() {
+        let json = r#"{
+            "base": "/api",
+            "public_home": "/home",
+            "public_error": "/error"
+        }"#;
+
+        let deserialized: Routes = serde_json::from_str(json).expect("Deserialization failed");
+        // Check if the fields are as expected
+        assert_eq!(deserialized.base, "/api");
+        assert_eq!(deserialized.public_home, "/home");
+        assert_eq!(deserialized.public_error, "/error");
+    }
+
+    #[test]
+    fn test_normalize_slash() {
+        let routes = Routes::default();
+        assert_eq!(routes.normalize_slash("path"), "path/");
+        assert_eq!(routes.normalize_slash("path/"), "path/");
+    }
+
+    #[test]
+    fn test_join_paths() {
+        let routes = Routes::default();
+        assert_eq!(routes.join_paths("/base", "/path"), "/base/path");
+        assert_eq!(routes.join_paths("/base/", "/path"), "/base/path");
+        assert_eq!(routes.join_paths("/base", "path"), "/base/path");
+        assert_eq!(routes.join_paths("/base/", "path"), "/base/path");
+        assert_eq!(routes.join_paths("/base/", "//path"), "/base/path");
+    }
+
+    #[test]
+    fn test_with_base_prepend() {
+        let mut routes = Routes::default();
+        routes.base = "/api".to_string();
+        routes.public_home = "home".to_string();
+        routes.public_error = "/error".to_string();
+
+        let new_routes = routes.with_base_prepend();
+        assert_eq!(new_routes.base, "/api/");
+        assert_eq!(new_routes.public_home, "/api/home");
+        assert_eq!(new_routes.public_error, "/api/error");
     }
 }
