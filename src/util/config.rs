@@ -5,7 +5,8 @@ use figment::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::{env, fmt, sync::Arc};
+use std::{env, fmt, net::IpAddr, sync::Arc};
+use url::Url;
 
 use crate::util::token_expander::expand_tokens;
 
@@ -114,7 +115,11 @@ impl Website {
 
     pub fn format_public_server_url(&self, path: &str) -> String {
         let url = self.public_server_url();
-        format!("{}/{}", url, path.trim_start_matches('/'))
+        format!(
+            "{}/{}",
+            url.trim_end_matches('/'),
+            path.trim_start_matches('/')
+        )
     }
 
     fn get_protocol_and_port(&self) -> (&str, u16) {
@@ -138,21 +143,27 @@ impl Website {
     }
 
     fn format_url(&self, protocol: &str, port: u16) -> String {
-        self.format_hostname_and_port(protocol, port)
+        let base = format!("{}://{}", protocol, self.public_hostname);
+        let mut url = Url::parse(&base).expect("Invalid base URL");
+
+        if !Self::is_default_port(protocol, port) {
+            url.set_port(Some(port)).expect("Invalid port");
+        }
+        url.to_string().trim_end_matches('/').to_string()
     }
 }
 
 impl Default for Website {
     fn default() -> Self {
         Website {
-            public_hostname: "localhost".to_string(),
+            public_hostname: "localhost".into(),
             public_ports: Ports::default(),
             public_ssl_enabled: false,
-            bind_address: "127.0.0.1".parse().unwrap(),
-            bind_ports: Ports::default(),
+            bind_address: "127.0.0.1".parse().expect("Invalid IP address"),
             bind_ssl_config: SslConfig::default(),
-            index_page: "index.html".to_string(),
-            web_root: "../public/wwwroot".to_string(),
+            index_page: "index.html".into(),
+            web_root: "../public/wwwroot".into(),
+            bind_ports: Ports::default(),
         }
     }
 }

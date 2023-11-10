@@ -24,6 +24,7 @@ lazy_static = "*"
 regex = "*"
 serde_json = "*"
 tracing = "*"
+url = "*"
 
 [dependencies.figment]
 version = "*"
