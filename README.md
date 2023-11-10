@@ -1,6 +1,6 @@
 # Welcome to the Grafton Machine Shed
 
-The Grafton Machine Shed API Server is a platform written in the Rust language designed to serve multiple APIs, protocols and services. Our goal is to provide a robust, efficient, and flexible platform for hosting a wide range of applications that collaborate on the internet with AI Agents and LLMs.  For more information about Grafton Machine Shed projects and capabilities, visit our [website](https://www.grafton.ai).
+The Grafton Machine Shed API Server is a platform written in the Rust language designed to serve multiple APIs, protocols and services. Our goal is to provide a robust, efficient, and flexible platform for hosting a wide range of applications that collaborate on the internet particularly with AI Agents and LLMs.  For more information about Grafton Machine Shed projects and capabilities, visit our [website](https://www.grafton.ai).
 
 ## Licensing
 
@@ -28,4 +28,4 @@ For those wishing to integrate the Grafton Machine Shed server into closed-sourc
 
 ## Questions and Commercial Licensing
 
-For any questions about licensing, using the software from the Grafton Machine Shed, or to inquire about our commercial license, please contact us at [grant@grafton.ai](mailto:grant@grafton.ai).
+For any questions about licensing, using the software from the Grafton Machine Shed or to inquire about our commercial license please contact us at [grant@grafton.ai](mailto:grant@grafton.ai).
