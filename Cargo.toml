@@ -27,3 +27,12 @@ tracing = { version = "*" }
 url = { version = "*" }
 figment = { version = "*", features = ["env", "toml"] }
 serde = { version = "*", features = ["derive"] }
+axum-login = "0.7"
+
+[dependencies.oso]
+version = "*"
+features = ["uuid-10"]
+
+[dependencies.tokio]
+version = "*"
+features = ["signal", "rt-multi-thread"]

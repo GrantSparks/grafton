@@ -1,4 +1,5 @@
 mod util;
+mod model;
 
 use util::config::Config;
 
