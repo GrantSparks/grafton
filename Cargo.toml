@@ -1,52 +1,59 @@
 [package]
-name = "grafton-server"
-version = "0.1.0"
-edition = "2021"
 authors = ["Grant Sparks <grant@grafton.ai>"]
-description = "The Grafton Machine Shed API Server, written in Rust, serves multiple APIs, protocols, and services. It aims to provide a robust, efficient, and flexible platform for hosting a variety of internet-collaborating applications particularly with AI Agents and LLMs."
-homepage = "https://www.grafton.ai"
-repository = "https://github.com/GrantSparks/grafton"
-license = "Apache-2.0"
-keywords = ["api", "web", "http", "server", "networking", "ai"]
 categories = ["network-programming", "web-programming"]
+description = "The Grafton Machine Shed API Server, written in Rust, serves multiple APIs, protocols, and services. It aims to provide a robust, efficient, and flexible platform for hosting a variety of internet-collaborating applications particularly with AI Agents and LLMs."
+edition = "2021"
+homepage = "https://www.grafton.ai"
 include = [
-    "config/default.toml",
-    "src/**/*",
     "Cargo.toml",
-    "README.md",
     "LICENSE",
+    "README.md",
+    "config/default.toml",
+    "config/policies.polar",
+    "src/**/*",
 ]
+keywords = ["api", "web", "http", "server", "networking", "ai"]
+license = "Apache-2.0"
+name = "grafton-server"
 publish = false
+repository = "https://github.com/GrantSparks/grafton"
+version = "0.1.0"
 
 [features]
 default = ["grpc", "rbac", "graphql"]
-grpc = ["tonic"]
 graphql = []
+grpc = ["tonic"]
 rbac = ["oso"]
 
 [dependencies]
-anyhow = { version = "*" }
-lazy_static = { version = "*" }
-regex = { version = "*" }
-serde_json = { version = "*" }
+anyhow = "*"
+axum-login = "*"
+lazy_static = "*"
+regex = "*"
+serde_json = "*"
 tracing = "*"
 tracing-appender = "*"
 tracing-subscriber = "*"
-url = { version = "*" }
-figment = { version = "*", features = ["env", "toml"] }
-serde = { version = "*", features = ["derive"] }
-axum-login = "0.7"
+url = "*"
+
+[dependencies.figment]
+features = ["env", "toml"]
+version = "*"
 
 [dependencies.oso]
-version = "*"
 features = ["uuid-10"]
 optional = true
+version = "*"
+
+[dependencies.serde]
+features = ["derive"]
+version = "*"
 
 [dependencies.tokio]
-version = "*"
 features = ["signal", "rt-multi-thread"]
+version = "*"
 
 [dependencies.tonic]
-version = "*"
 features = ["transport", "tls"]
 optional = true
+version = "*"
