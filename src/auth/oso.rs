@@ -1,8 +1,9 @@
 use oso::{Class, Oso, PolarClass};
 
 use crate::{
+    error::AppError,
     model::{Role, User},
-    util::{AppError, Config},
+    util::Config,
 };
 
 pub fn initialize_oso(config: &Config) -> Result<Oso, AppError> {

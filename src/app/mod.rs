@@ -4,8 +4,9 @@ use std::sync::Arc;
 use crate::auth::oso::initialize_oso;
 
 use crate::{
+    error::AppError,
     model::AppContext,
-    util::{AppError, Config, TracingLogger},
+    util::{Config, TracingLogger},
 };
 
 pub fn start(config: Config) -> Result<(), AppError> {

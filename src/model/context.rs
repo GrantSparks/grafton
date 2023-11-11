@@ -7,7 +7,7 @@ use std::{
 use oso::Oso;
 
 use super::User;
-use crate::util::{AppError, Config};
+use crate::{error::AppError, util::Config};
 
 #[derive(Clone)]
 pub struct AppContext {

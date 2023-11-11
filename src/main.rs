@@ -1,5 +1,6 @@
 mod app;
 mod auth;
+mod error;
 mod model;
 mod util;
 
