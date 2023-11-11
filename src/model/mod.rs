@@ -1,7 +1,10 @@
-pub mod token;
+mod token;
+pub use token::Token;
 
-pub mod user;
-pub use user::{Role, User};
+mod user;
+#[cfg(feature = "rbac")]
+pub use user::Role;
+pub use user::User;
 
 mod context;
 pub use context::AppContext;

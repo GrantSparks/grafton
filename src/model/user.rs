@@ -1,9 +1,11 @@
 use axum_login::AuthUser;
+#[cfg(feature = "rbac")]
 use oso::PolarClass;
 use serde::{Deserialize, Serialize};
 
 use super::Identifiable;
 
+#[cfg(feature = "rbac")]
 #[derive(Debug, Default, Clone, Serialize, Deserialize, Eq, PartialEq, Hash, PartialOrd, Copy)]
 pub enum Role {
     #[default]
@@ -12,14 +14,24 @@ pub enum Role {
     Admin,
 }
 
+#[cfg(feature = "rbac")]
 impl PolarClass for Role {}
 
+#[cfg(feature = "rbac")]
 #[derive(Debug, Default, Clone, PolarClass, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct User {
     pub id: usize,
     pub username: String,
     #[polar(attribute)]
     pub role: Role,
+    pub pw_hash: Vec<u8>,
+}
+
+#[cfg(not(feature = "rbac"))]
+#[derive(Debug, Default, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+pub struct User {
+    pub id: usize,
+    pub username: String,
     pub pw_hash: Vec<u8>,
 }
 

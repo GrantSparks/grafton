@@ -106,6 +106,7 @@ pub struct Website {
     pub public_hostname: String,
     pub public_ports: Ports,
     pub public_ssl_enabled: bool,
+    pub oso_policy_files: Vec<String>,
 }
 
 impl Website {
@@ -163,8 +164,9 @@ impl Default for Website {
             bind_address: "127.0.0.1".parse().expect("Invalid IP address"),
             bind_ssl_config: SslConfig::default(),
             index_page: "index.html".into(),
-            web_root: "../public/wwwroot".into(),
+            web_root: "../public/www".into(),
             bind_ports: Ports::default(),
+            oso_policy_files: vec![],
         }
     }
 }
