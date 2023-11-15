@@ -49,8 +49,7 @@ features = ["tls-rustls"]
 version = "*"
 
 [dependencies.axum-login]
-#path = "axum-login/axum-login"
-version = "*"
+path = "../axum-login/axum-login"
 
 # TODO: reqwest is only being used because axum-login doesn't re-export it
 [dependencies.reqwest]
