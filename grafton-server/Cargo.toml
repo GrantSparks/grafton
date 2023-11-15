@@ -51,7 +51,6 @@ version = "*"
 [dependencies.axum-login]
 path = "../axum-login/axum-login"
 
-# TODO: reqwest is only being used because axum-login doesn't re-export it
 [dependencies.reqwest]
 features = ["json"]
 version = "*"

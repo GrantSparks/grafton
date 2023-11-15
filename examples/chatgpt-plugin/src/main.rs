@@ -12,7 +12,6 @@ use tokio::signal;
 
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
-    // Load the configuration
     let config = match Config::load("./config") {
         Ok(cfg) => cfg,
         Err(e) => {
@@ -21,7 +20,6 @@ async fn main() -> Result<(), AppError> {
         }
     };
 
-    // Get the router
     let router = create_grafton_router(config.clone()).await.map_err(|e| {
         error!("Failed to create router: {}", e);
         e

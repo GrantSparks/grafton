@@ -1,5 +1,3 @@
-// GMS: TODO: Remove unused
-#[allow(unused)]
 mod config;
 pub use config::Config;
 

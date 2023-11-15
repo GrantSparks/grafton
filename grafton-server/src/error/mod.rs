@@ -54,7 +54,6 @@ impl fmt::Display for AppError {
 
 impl Error for AppError {}
 
-// Automatic error type conversion
 impl From<std::io::Error> for AppError {
     fn from(err: std::io::Error) -> Self {
         AppError::IoError(err)

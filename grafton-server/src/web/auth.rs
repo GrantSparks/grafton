@@ -152,7 +152,7 @@ impl AuthnBackend for Backend {
             .map_err(Self::Error::OAuth2)?;
 
         // Use access token to request user info.
-        let user_info = reqwest::Client::new() // TODO: reqwest is only being used because axum-login doesn't re-export it
+        let user_info = reqwest::Client::new()
             .get("https://api.github.com/user")
             .header(USER_AGENT, "axum-login") // See: https://docs.github.com/en/rest/overview/resources-in-the-rest-api?apiVersion=2022-11-28#user-agent-required
             .header(

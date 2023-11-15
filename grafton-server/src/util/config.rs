@@ -266,14 +266,12 @@ impl Config {
     }
 
     pub fn figment_with_paths(config_dir: &str, run_mode: &str) -> Figment {
-        // Transform and temporarily set the environment variables
         let original_env = env::vars().collect::<Vec<_>>();
         for (key, value) in &original_env {
             let new_key = Config::map_env_var(key.to_string());
             env::set_var(new_key, value);
         }
 
-        // Create Figment with transformed environment variables
         let current_dir = env::current_dir().expect("Failed to get current directory");
         let absolute_config_dir = current_dir.join(config_dir);
         let default_path = absolute_config_dir.join("default.toml");
@@ -291,7 +289,6 @@ impl Config {
 
         figment = figment.merge(Env::raw());
 
-        // Restore the original environment variables
         for (key, value) in original_env {
             env::set_var(key, value);
         }
@@ -420,7 +417,6 @@ mod tests {
         }"#;
 
         let deserialized: Routes = serde_json::from_str(json).expect("Deserialization failed");
-        // Check if the fields are as expected
         assert_eq!(deserialized.base, "/api");
         assert_eq!(deserialized.public_home, "/home");
         assert_eq!(deserialized.public_error, "/error");
