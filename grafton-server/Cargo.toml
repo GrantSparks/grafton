@@ -46,6 +46,10 @@ askama_axum = "*"
 # TODO: async-trait is only being used because something didn't use the re-export from axum which was otherwise available
 async-trait = "*"
 
+[dependencies.axum-server]
+features = ["tls-rustls"]
+version = "*"
+
 [dependencies.axum-login]
 #path = "axum-login/axum-login"
 version = "*"

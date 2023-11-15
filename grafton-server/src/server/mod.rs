@@ -1,6 +1,8 @@
-use std::sync::Arc;
+use std::{error::Error, net::SocketAddr, sync::Arc};
 
+use axum::routing::IntoMakeService;
 use axum_login::tower_sessions::{cookie::SameSite, Expiry, MemoryStore, SessionManagerLayer};
+use axum_server::{tls_rustls::RustlsConfig, Server};
 use time::Duration;
 use tracing::info;
 
@@ -19,7 +21,7 @@ fn create_session_layer() -> SessionManagerLayer<MemoryStore> {
         .with_expiry(Expiry::OnInactivity(Duration::days(1)))
 }
 
-pub async fn start(config: Config) -> Result<(), AppError> {
+pub async fn create_grafton_router(config: Config) -> Result<axum::Router, AppError> {
     let _logger_guard = TracingLogger::from_config(&config);
 
     let context = {
@@ -44,14 +46,40 @@ pub async fn start(config: Config) -> Result<(), AppError> {
     let app = match app_result {
         Ok(app) => app,
         Err(e) => {
-            // Convert 'e' to an appropriate variant of `AppError`
-            // This might involve checking the type of 'e' and then deciding
-            // which `AppError` variant to use
-            return Err(AppError::from(e)); // Or use a specific `AppError` variant
+            return Err(AppError::from(e));
         }
     };
 
     let auth_router = app.create_auth_router().await;
+
+    let router_with_state = auth_router.with_state(app_ctx.clone());
+
+    Ok(router_with_state)
+}
+
+pub async fn start_https_server(
+    https_addr: SocketAddr,
+    web_service: IntoMakeService<axum::Router>,
+    config: RustlsConfig,
+) -> Result<(), Box<dyn Error + Send + Sync>> {
+    info!("https server listening on {}", https_addr);
+
+    tokio::task::spawn(async move {
+        axum_server::bind_rustls(https_addr, config)
+            .serve(web_service)
+            .await
+    });
+
+    Ok(())
+}
+
+pub async fn start_http_server(
+    http_addr: SocketAddr,
+    web_service: IntoMakeService<axum::Router>,
+) -> Result<(), Box<dyn Error + Send + Sync>> {
+    info!("http server listening on {}", http_addr);
+
+    tokio::task::spawn(async move { Server::bind(http_addr).serve(web_service).await });
 
     Ok(())
 }

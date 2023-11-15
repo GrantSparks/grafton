@@ -24,6 +24,8 @@ pub enum AppError {
     DatabaseMigrationError(String),
     InvalidAuthUrl(String),
     InvalidTokenUrl(String),
+    ConfigError(String),
+    IoError(std::io::Error),
 }
 
 impl fmt::Display for AppError {
@@ -44,6 +46,8 @@ impl fmt::Display for AppError {
             AppError::DatabaseMigrationError(err) => write!(f, "Database migration error: {}", err),
             AppError::InvalidAuthUrl(err) => write!(f, "Invalid authentication URL: {}", err),
             AppError::InvalidTokenUrl(err) => write!(f, "Invalid token URL: {}", err),
+            AppError::ConfigError(err) => write!(f, "Invalid config: {}", err),
+            AppError::IoError(err) => write!(f, "I/O error: {}", err),
         }
     }
 }
@@ -51,6 +55,12 @@ impl fmt::Display for AppError {
 impl Error for AppError {}
 
 // Automatic error type conversion
+impl From<std::io::Error> for AppError {
+    fn from(err: std::io::Error) -> Self {
+        AppError::IoError(err)
+    }
+}
+
 impl From<Box<dyn Error + Send + Sync>> for AppError {
     fn from(err: Box<dyn Error + Send + Sync>) -> Self {
         AppError::Generic(err)
@@ -96,6 +106,8 @@ impl From<AppError> for Status {
             AppError::InvalidTokenUrl(err) => {
                 Status::internal(format!("Invalid token URL: {}", err))
             }
+            AppError::ConfigError(err) => Status::internal(format!("Invalid config: {}", err)),
+            AppError::IoError(err) => tonic::Status::internal(format!("I/O error: {}", err)),
         }
     }
 }

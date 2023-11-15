@@ -1,4 +1,8 @@
 [workspace]
-default-members = ["grafton-server", "axum-login/axum-login"]
+default-members = [
+    "grafton-server",
+    "axum-login/axum-login",
+    "examples/chatgpt-plugin",
+]
 resolver = "2"
-members = ["axum-login/axum-login", "grafton-server"]
+members = ["axum-login/axum-login", "grafton-server", "examples/chatgpt-plugin"]

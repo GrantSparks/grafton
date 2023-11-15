@@ -22,7 +22,6 @@ use super::auth::Backend;
 pub struct App {
     db: SqlitePool,
     client: BasicClient,
-    app_ctx: Arc<AppContext>,
     session_layer: SessionManagerLayer<MemoryStore>,
 }
 
@@ -31,10 +30,11 @@ impl App {
         app_ctx: Arc<AppContext>,
         session_layer: SessionManagerLayer<MemoryStore>,
     ) -> Result<Self, AppError> {
-        // TODO:  Protect these in config
+        // TODO:  Protect these strings in config
         let client_id = ClientId::new(app_ctx.config.oauth_clients["github"].client_id.clone());
         let client_secret =
             ClientSecret::new(app_ctx.config.oauth_clients["github"].client_secret.clone());
+
         let auth_url = AuthUrl::new(app_ctx.config.oauth_clients["github"].auth_uri.clone())
             .map_err(|e| AppError::InvalidAuthUrl(e.to_string()))?;
         let token_url = TokenUrl::new(app_ctx.config.oauth_clients["github"].token_uri.clone())
@@ -43,9 +43,6 @@ impl App {
         let db = match SqlitePool::connect(":memory:").await {
             Ok(pool) => pool,
             Err(e) => {
-                // Handle the error e
-                // You can log the error and/or convert it to a variant of AppError
-                // For example, using a new variant like `DatabaseConnectionError`
                 return Err(AppError::DatabaseConnectionError(e.to_string()));
             }
         };
@@ -53,9 +50,6 @@ impl App {
         match sqlx::migrate!().run(&db).await {
             Ok(_) => (),
             Err(e) => {
-                // Handle the migration error e
-                // Convert it to a suitable variant of AppError
-                // For instance, using a variant like `DatabaseMigrationError`
                 return Err(AppError::DatabaseMigrationError(e.to_string()));
             }
         }
@@ -63,7 +57,6 @@ impl App {
         Ok(Self {
             db,
             client,
-            app_ctx,
             session_layer,
         })
     }

@@ -1,0 +1,12 @@
+[package]
+name = "chatgpt-plugin"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+axum = "*"
+axum-server = "*"
+tokio = "*"
+
+[dependencies.grafton-server]
+path = "../../grafton-server"
