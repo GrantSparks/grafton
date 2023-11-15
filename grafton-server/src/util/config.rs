@@ -234,15 +234,24 @@ pub struct ClientConfig {
     pub extra: Map<String, Value>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Default, Debug, Serialize, Deserialize, Clone)]
+#[serde(default)]
 pub struct Config {
+    #[serde(default = "default_run_mode")]
     pub run_mode: String,
+    #[serde(default)]
     pub logger: LoggerConfig,
+    #[serde(default)]
     pub website: Website,
+    #[serde(default)]
     pub session: SessionConfig,
+    #[serde(default)]
     pub routes: Routes,
-    #[serde(flatten)]
     pub oauth_clients: HashMap<String, ClientConfig>,
+}
+
+fn default_run_mode() -> String {
+    "dev".to_string()
 }
 
 impl Config {
@@ -456,7 +465,8 @@ mod tests {
                 "github": {
                     "client_id": "github_id",
                     "client_secret": "github_secret",
-                    "redirect_uri": "http://localhost/callback",
+                    "redirect_uri": "http://localhost/redirect",
+                    "auth_uri": "http://localhost/callback",
                     "token_uri": "http://localhost/token"
                 }
             }
@@ -490,13 +500,15 @@ mod tests {
                 "github": {
                     "client_id": "github_id",
                     "client_secret": "github_secret",
-                    "redirect_uri": "http://localhost/github/callback",
+                    "redirect_uri": "http://localhost/github/redirect",
+                    "auth_uri": "http://localhost/github/callback",
                     "token_uri": "http://localhost/github/token"
                 },
                 "google": {
                     "client_id": "google_id",
                     "client_secret": "google_secret",
-                    "redirect_uri": "http://localhost/google/callback",
+                    "redirect_uri": "http://localhost/google/redirect",
+                    "auth_uri": "http://localhost/google/callback",
                     "token_uri": "http://localhost/google/token"
                 }
             }
@@ -521,7 +533,7 @@ mod tests {
             "oauth_clients": {
                 "invalid_client": {
                     "client_id": "id_without_secret",
-                    // missing client_secret and token_uri
+                    // missing fields
                 }
             }
         }"#;
