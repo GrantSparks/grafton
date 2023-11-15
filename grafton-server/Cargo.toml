@@ -28,6 +28,9 @@ graphql = []
 grpc = ["tonic"]
 rbac = ["oso"]
 
+[dev-dependencies]
+tempfile = "*"
+
 [dependencies]
 anyhow = "*"
 http = "*"

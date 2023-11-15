@@ -12,6 +12,7 @@ use url::Url;
 
 use crate::util::token_expander::expand_tokens;
 
+#[allow(unused)]
 pub fn load_config(config_dir: &str) -> Result<Arc<Config>> {
     let config = Config::load(config_dir)?;
     Ok(Arc::new(config))
@@ -138,6 +139,7 @@ impl Website {
         matches!((protocol, port), ("http", 80) | ("https", 443))
     }
 
+    #[allow(unused)]
     fn format_hostname_and_port(&self, protocol: &str, port: u16) -> String {
         if Self::is_default_port(protocol, port) {
             format!("{}://{}", protocol, self.public_hostname)
@@ -310,6 +312,22 @@ impl Config {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Write;
+    use std::path::PathBuf;
+    use tempfile::NamedTempFile;
+
+    // Helper function to create a temporary configuration file.
+    fn create_temp_config_file(content: &str) -> PathBuf {
+        let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        write!(temp_file, "{}", content).expect("Failed to write to temp file");
+
+        // Persist the file and get its path
+        temp_file
+            .into_temp_path()
+            .keep()
+            .expect("Failed to keep temp file")
+            .to_path_buf()
+    }
 
     #[test]
     fn test_base_prepend() {
@@ -534,5 +552,49 @@ mod tests {
 
         let result: Result<Config, _> = serde_json::from_str(json);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_format_hostname_and_port_default_http_port() {
+        let website = Website {
+            public_hostname: "example.com".into(),
+            public_ports: Ports::default(), // HTTP port 80
+            public_ssl_enabled: false,
+            ..Default::default()
+        };
+        assert_eq!(
+            website.format_hostname_and_port("http", website.public_ports.http),
+            "http://example.com"
+        );
+    }
+
+    #[test]
+    fn test_format_hostname_and_port_non_default_https_port() {
+        let website = Website {
+            public_hostname: "example.com".into(),
+            public_ports: Ports {
+                https: 8443,
+                ..Default::default()
+            },
+            public_ssl_enabled: true,
+            ..Default::default()
+        };
+        assert_eq!(
+            website.format_hostname_and_port("https", website.public_ports.https),
+            "https://example.com:8443"
+        );
+    }
+
+    #[test]
+    fn test_load_config_with_temp_file() {
+        let config_path = create_temp_config_file(
+            r#"
+            [website]
+            public_hostname = "localhost"
+        "#,
+        );
+
+        let config = Config::load(config_path.to_str().unwrap()).expect("Failed to load config");
+        assert_eq!(config.website.public_hostname, "localhost");
     }
 }
