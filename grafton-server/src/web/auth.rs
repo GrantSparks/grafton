@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use askama::Template;
-use async_trait::async_trait;
 use axum::{
+    async_trait,
     extract::Query,
     response::{IntoResponse, Redirect},
     routing::{get, post},
@@ -18,7 +18,7 @@ use oauth2::{
     AuthorizationCode, CsrfToken, TokenResponse,
 };
 use serde::Deserialize;
-use sqlx::SqlitePool; // TODO: async-trait is only being used because something didn't use the re-export from axum which was otherwise available
+use sqlx::SqlitePool;
 
 use crate::{
     model::{AppContext, User},
