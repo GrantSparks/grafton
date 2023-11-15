@@ -27,7 +27,7 @@ pub struct SessionConfig {
 impl Default for SessionConfig {
     fn default() -> Self {
         SessionConfig {
-            same_site_policy: SameSiteConfig::Lax,
+            same_site_policy: SameSiteConfig::default(),
         }
     }
 }
@@ -41,7 +41,7 @@ pub struct LoggerConfig {
 impl Default for LoggerConfig {
     fn default() -> Self {
         LoggerConfig {
-            verbosity: Verbosity::Info,
+            verbosity: Verbosity::default(),
         }
     }
 }
@@ -53,6 +53,12 @@ pub enum Verbosity {
     Debug,
     Warn,
     Error,
+}
+
+impl Default for Verbosity {
+    fn default() -> Self {
+        Verbosity::Info
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -180,6 +186,12 @@ pub enum SameSiteConfig {
     Strict,
     Lax,
     None,
+}
+
+impl Default for SameSiteConfig {
+    fn default() -> Self {
+        SameSiteConfig::Lax
+    }
 }
 
 impl fmt::Display for SameSiteConfig {
