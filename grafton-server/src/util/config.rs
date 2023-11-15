@@ -4,8 +4,8 @@ use figment::{
     Figment,
 };
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
-use std::{env, fmt, net::IpAddr, sync::Arc};
+use serde_json::{Map, Value};
+use std::{collections::HashMap, env, fmt, net::IpAddr, sync::Arc};
 use url::Url;
 
 use crate::util::token_expander::expand_tokens;
@@ -223,6 +223,17 @@ impl Default for Ports {
         }
     }
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ClientConfig {
+    pub client_id: String,
+    pub client_secret: String,
+    pub auth_uri: String,
+    pub token_uri: String,
+    #[serde(flatten)]
+    pub extra: Map<String, Value>,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Config {
     pub run_mode: String,
@@ -230,6 +241,8 @@ pub struct Config {
     pub website: Website,
     pub session: SessionConfig,
     pub routes: Routes,
+    #[serde(flatten)]
+    pub oauth_clients: HashMap<String, ClientConfig>,
 }
 
 impl Config {
@@ -432,5 +445,88 @@ mod tests {
         assert_eq!(new_routes.base, "/api/");
         assert_eq!(new_routes.public_home, "/api/home");
         assert_eq!(new_routes.public_error, "/api/error");
+    }
+
+    #[test]
+    fn test_load_single_oauth_client() {
+        let json = r#"
+        {
+            "run_mode": "test",
+            "oauth_clients": {
+                "github": {
+                    "client_id": "github_id",
+                    "client_secret": "github_secret",
+                    "redirect_uri": "http://localhost/callback",
+                    "token_uri": "http://localhost/token"
+                }
+            }
+        }"#;
+
+        let config: Config = serde_json::from_str(json).expect("Failed to deserialize");
+        assert_eq!(
+            config.oauth_clients.get("github").unwrap().client_id,
+            "github_id"
+        );
+        assert_eq!(
+            config.oauth_clients.get("github").unwrap().client_secret,
+            "github_secret"
+        );
+        assert_eq!(
+            config.oauth_clients.get("github").unwrap().auth_uri,
+            "http://localhost/callback"
+        );
+        assert_eq!(
+            config.oauth_clients.get("github").unwrap().token_uri,
+            "http://localhost/token"
+        );
+    }
+
+    #[test]
+    fn test_load_multiple_oauth_clients() {
+        let json = r#"
+        {
+            "run_mode": "test",
+            "oauth_clients": {
+                "github": {
+                    "client_id": "github_id",
+                    "client_secret": "github_secret",
+                    "redirect_uri": "http://localhost/github/callback",
+                    "token_uri": "http://localhost/github/token"
+                },
+                "google": {
+                    "client_id": "google_id",
+                    "client_secret": "google_secret",
+                    "redirect_uri": "http://localhost/google/callback",
+                    "token_uri": "http://localhost/google/token"
+                }
+            }
+        }"#;
+
+        let config: Config = serde_json::from_str(json).expect("Failed to deserialize");
+        assert_eq!(
+            config.oauth_clients.get("github").unwrap().token_uri,
+            "http://localhost/github/token"
+        );
+        assert_eq!(
+            config.oauth_clients.get("google").unwrap().token_uri,
+            "http://localhost/google/token"
+        );
+    }
+
+    #[test]
+    fn test_deserialization_error_for_missing_fields_with_token_uri() {
+        let json = r#"
+        {
+            "run_mode": "test",
+            "oauth_clients": {
+                "invalid_client": {
+                    "client_id": "id_without_secret",
+                    // missing client_secret and token_uri
+                }
+            }
+        }"#;
+
+        let result: Result<Config, _> = serde_json::from_str(json);
+        assert!(result.is_err());
     }
 }

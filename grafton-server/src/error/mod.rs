@@ -1,10 +1,10 @@
 use std::{error::Error, fmt};
 
 #[cfg(feature = "rbac")]
-use std::sync::{MutexGuard, PoisonError};
-
-#[cfg(feature = "rbac")]
-use oso::{Oso, OsoError};
+use {
+    oso::{Oso, OsoError},
+    std::sync::{MutexGuard, PoisonError},
+};
 
 #[cfg(feature = "grpc")]
 use tonic::{transport::Error as TonicTransportError, Status};
@@ -20,6 +20,10 @@ pub enum AppError {
     #[cfg(feature = "grpc")]
     TonicTransport(TonicTransportError),
     MutexLockError(String),
+    DatabaseConnectionError(String),
+    DatabaseMigrationError(String),
+    InvalidAuthUrl(String),
+    InvalidTokenUrl(String),
 }
 
 impl fmt::Display for AppError {
@@ -34,6 +38,12 @@ impl fmt::Display for AppError {
             #[cfg(feature = "grpc")]
             AppError::TonicTransport(err) => write!(f, "Tonic transport error: {}", err),
             AppError::MutexLockError(err) => write!(f, "Mutex lock error: {}", err),
+            AppError::DatabaseConnectionError(err) => {
+                write!(f, "Database connection error: {}", err)
+            }
+            AppError::DatabaseMigrationError(err) => write!(f, "Database migration error: {}", err),
+            AppError::InvalidAuthUrl(err) => write!(f, "Invalid authentication URL: {}", err),
+            AppError::InvalidTokenUrl(err) => write!(f, "Invalid token URL: {}", err),
         }
     }
 }
@@ -74,6 +84,18 @@ impl From<AppError> for Status {
                 Status::internal(format!("Tonic transport error: {}", err))
             }
             AppError::MutexLockError(err) => Status::internal(format!("Mutex lock error: {}", err)),
+            AppError::DatabaseConnectionError(err) => {
+                Status::internal(format!("Database connection error: {}", err))
+            }
+            AppError::DatabaseMigrationError(err) => {
+                Status::internal(format!("Database migration error: {}", err))
+            }
+            AppError::InvalidAuthUrl(err) => {
+                Status::internal(format!("Invalid authentication URL: {}", err))
+            }
+            AppError::InvalidTokenUrl(err) => {
+                Status::internal(format!("Invalid token URL: {}", err))
+            }
         }
     }
 }

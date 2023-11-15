@@ -1,0 +1,90 @@
+[package]
+authors = ["Grant Sparks <grant@grafton.ai>"]
+categories = ["network-programming", "web-programming"]
+description = "The Grafton Machine Shed API Server, written in Rust, serves multiple APIs, protocols, and services. It aims to provide a robust, efficient, and flexible platform for hosting a variety of internet-collaborating applications particularly with AI Agents and LLMs."
+edition = "2021"
+homepage = "https://www.grafton.ai"
+include = [
+    "Cargo.toml",
+    "LICENSE",
+    "README.md",
+    "config/default.toml",
+    "config/policies.polar",
+    "src/**/*",
+]
+keywords = ["api", "web", "http", "server", "networking", "ai"]
+license = "Apache-2.0"
+name = "grafton-server"
+publish = false
+repository = "https://github.com/GrantSparks/grafton"
+version = "0.1.0"
+
+[profile.dev.build-override]
+opt-level = 3
+
+[features]
+default = ["grpc", "rbac", "graphql"]
+graphql = []
+grpc = ["tonic"]
+rbac = ["oso"]
+
+[dependencies]
+anyhow = "*"
+http = "*"
+lazy_static = "*"
+oauth2 = "*"
+regex = "*"
+serde_json = "*"
+thiserror = "*"
+time = "*"
+tower = "*"
+tracing = "*"
+tracing-appender = "*"
+tracing-subscriber = "*"
+url = "*"
+askama_axum = "*"
+# TODO: async-trait is only being used because something didn't use the re-export from axum which was otherwise available
+async-trait = "*"
+
+[dependencies.axum-login]
+#path = "axum-login/axum-login"
+version = "*"
+
+# TODO: reqwest is only being used because axum-login doesn't re-export it
+[dependencies.reqwest]
+features = ["json"]
+version = "*"
+
+[dependencies.askama]
+features = ["with-axum"]
+version = "*"
+
+[dependencies.axum]
+features = ["macros"]
+version = "*"
+
+[dependencies.figment]
+features = ["env", "toml"]
+version = "*"
+
+[dependencies.oso]
+features = ["uuid-10"]
+optional = true
+version = "*"
+
+[dependencies.serde]
+features = ["derive"]
+version = "*"
+
+[dependencies.sqlx]
+features = ["sqlite", "time", "runtime-tokio"]
+version = "*"
+
+[dependencies.tokio]
+features = ["signal", "rt-multi-thread"]
+version = "*"
+
+[dependencies.tonic]
+features = ["transport", "tls"]
+optional = true
+version = "*"

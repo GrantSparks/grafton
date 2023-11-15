@@ -1,6 +1,3 @@
-mod token;
-pub use token::Token;
-
 mod user;
 #[cfg(feature = "rbac")]
 pub use user::Role;

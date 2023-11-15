@@ -1,12 +1,16 @@
 use axum_login::AuthUser;
-#[cfg(feature = "rbac")]
-use oso::PolarClass;
 use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
 
 use super::Identifiable;
 
 #[cfg(feature = "rbac")]
-#[derive(Debug, Default, Clone, Serialize, Deserialize, Eq, PartialEq, Hash, PartialOrd, Copy)]
+use oso::PolarClass;
+
+#[cfg(feature = "rbac")]
+#[derive(
+    Debug, Default, Clone, Serialize, Deserialize, Eq, PartialEq, Hash, PartialOrd, Copy, sqlx::Type,
+)]
 pub enum Role {
     #[default]
     None,
@@ -18,28 +22,30 @@ pub enum Role {
 impl PolarClass for Role {}
 
 #[cfg(feature = "rbac")]
-#[derive(Debug, Default, Clone, PolarClass, Serialize, Deserialize, Eq, PartialEq, Hash)]
+#[derive(
+    Debug, Default, Clone, PolarClass, Serialize, Deserialize, Eq, PartialEq, Hash, FromRow,
+)]
 pub struct User {
-    pub id: usize,
+    pub id: i64,
     pub username: String,
     #[polar(attribute)]
     pub role: Role,
-    pub pw_hash: Vec<u8>,
+    pub access_token: String,
 }
 
 #[cfg(not(feature = "rbac"))]
-#[derive(Debug, Default, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize, Eq, PartialEq, Hash, FromRow)]
 pub struct User {
-    pub id: usize,
+    pub id: i64,
     pub username: String,
     pub pw_hash: Vec<u8>,
 }
 
 impl AuthUser for User {
-    type Id = usize;
+    type Id = i64;
 
     fn session_auth_hash(&self) -> &[u8] {
-        &self.pw_hash
+        self.access_token.as_bytes()
     }
 
     fn id(&self) -> Self::Id {
@@ -47,8 +53,8 @@ impl AuthUser for User {
     }
 }
 
-impl Identifiable<usize> for User {
-    fn id(&self) -> usize {
+impl Identifiable<i64> for User {
+    fn id(&self) -> i64 {
         self.id
     }
 }

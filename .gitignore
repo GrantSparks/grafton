@@ -12,7 +12,7 @@ Cargo.lock
 
 # MSVC Windows builds of rustc generate these, which store debugging information
 *.pdb
-config/key.pem
-config/local.toml
-config/cert.pem
+**/config/key.pem
+**/config/local.toml
+**/config/cert.pem
 *.zip
