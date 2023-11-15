@@ -1,11 +1,13 @@
+use std::{collections::HashMap, env, fmt, sync::Arc};
+
 use anyhow::Result;
 use figment::{
     providers::{Env, Format, Toml},
     Figment,
 };
+use oauth2::{ClientId, ClientSecret};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-use std::{collections::HashMap, env, fmt, net::IpAddr, sync::Arc};
 use url::Url;
 
 use crate::util::token_expander::expand_tokens;
@@ -226,8 +228,8 @@ impl Default for Ports {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ClientConfig {
-    pub client_id: String,
-    pub client_secret: String,
+    pub client_id: ClientId,
+    pub client_secret: ClientSecret,
     pub auth_uri: String,
     pub token_uri: String,
     #[serde(flatten)]
@@ -471,11 +473,7 @@ mod tests {
         let config: Config = serde_json::from_str(json).expect("Failed to deserialize");
         assert_eq!(
             config.oauth_clients.get("github").unwrap().client_id,
-            "github_id"
-        );
-        assert_eq!(
-            config.oauth_clients.get("github").unwrap().client_secret,
-            "github_secret"
+            ClientId::new("github_id".to_string())
         );
         assert_eq!(
             config.oauth_clients.get("github").unwrap().auth_uri,

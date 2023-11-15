@@ -7,17 +7,16 @@ use axum_login::{
     AuthManagerLayer,
 };
 use http::StatusCode;
-use oauth2::{basic::BasicClient, AuthUrl, ClientId, ClientSecret, TokenUrl};
+use oauth2::{basic::BasicClient, AuthUrl, TokenUrl};
 use sqlx::SqlitePool;
 use tower::ServiceBuilder;
 
+use super::auth::Backend;
 use crate::{
     error::AppError,
     model::AppContext,
     web::{auth, oauth, protected},
 };
-
-use super::auth::Backend;
 
 pub struct App {
     db: SqlitePool,
@@ -30,10 +29,8 @@ impl App {
         app_ctx: Arc<AppContext>,
         session_layer: SessionManagerLayer<MemoryStore>,
     ) -> Result<Self, AppError> {
-        // TODO:  Protect these strings in config
-        let client_id = ClientId::new(app_ctx.config.oauth_clients["github"].client_id.clone());
-        let client_secret =
-            ClientSecret::new(app_ctx.config.oauth_clients["github"].client_secret.clone());
+        let client_id = app_ctx.config.oauth_clients["github"].client_id.clone();
+        let client_secret = app_ctx.config.oauth_clients["github"].client_secret.clone();
 
         let auth_url = AuthUrl::new(app_ctx.config.oauth_clients["github"].auth_uri.clone())
             .map_err(|e| AppError::InvalidAuthUrl(e.to_string()))?;
