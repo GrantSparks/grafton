@@ -33,7 +33,6 @@ tempfile = "*"
 
 [dependencies]
 anyhow = "*"
-http = "*"
 lazy_static = "*"
 oauth2 = "*"
 regex = "*"
@@ -63,8 +62,7 @@ features = ["with-axum"]
 version = "*"
 
 [dependencies.axum]
-features = ["macros"]
-version = "*"
+features = ["macros"] # Hack to enable macros in axum-login crate dependency
 
 [dependencies.figment]
 features = ["env", "toml"]

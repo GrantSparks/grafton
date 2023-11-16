@@ -1,16 +1,22 @@
 use std::sync::Arc;
 
 use askama::Template;
-use axum::{
-    async_trait,
-    extract::Query,
-    response::{IntoResponse, Redirect},
-    routing::{get, post},
-    Form,
+use axum_login::{
+    axum,
+    axum::{
+        async_trait,
+        extract::Query,
+        response::{IntoResponse, Redirect},
+        routing::{get, post},
+        Form,
+    },
+    http::{
+        header::{AUTHORIZATION, USER_AGENT},
+        StatusCode,
+    },
+    tower_sessions::Session,
+    AuthnBackend, UserId,
 };
-use axum_login::{tower_sessions::Session, AuthnBackend, UserId};
-use http::header::{AUTHORIZATION, USER_AGENT};
-use http::StatusCode;
 use oauth2::{
     basic::{BasicClient, BasicRequestTokenError},
     reqwest::{async_http_client, AsyncHttpClientError},

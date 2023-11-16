@@ -1,12 +1,15 @@
 use std::sync::Arc;
 
-use axum::{
-    extract::Query,
-    response::{IntoResponse, Redirect},
-    routing::get,
+use axum_login::{
+    axum,
+    axum::{
+        extract::Query,
+        response::{IntoResponse, Redirect},
+        routing::get,
+    },
+    http::StatusCode,
+    tower_sessions::Session,
 };
-use axum_login::tower_sessions::Session;
-use http::StatusCode;
 use oauth2::CsrfToken;
 use serde::Deserialize;
 
