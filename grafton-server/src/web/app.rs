@@ -6,7 +6,7 @@ use axum_login::{
     http::StatusCode,
     login_required,
     tower_sessions::{MemoryStore, SessionManagerLayer},
-    AuthManagerLayerBuilder,
+    AuthManagerLayer,
 };
 use oauth2::{basic::BasicClient, AuthUrl, TokenUrl};
 use sqlx::SqlitePool;
@@ -72,7 +72,7 @@ impl App {
             .layer(HandleErrorLayer::new(|_: BoxError| async {
                 StatusCode::BAD_REQUEST
             }))
-            .layer(AuthManagerLayerBuilder::new(backend, self.session_layer).build());
+            .layer(AuthManagerLayer::new(backend, self.session_layer));
 
         protected::router()
             .route_layer(login_required!(Backend, login_url = "/login"))
