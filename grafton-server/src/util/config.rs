@@ -1,5 +1,6 @@
-use std::{collections::HashMap, env, fmt, sync::Arc};
+use std::{collections::HashMap, env, fmt, path::Path, sync::Arc};
 
+use anyhow::anyhow;
 use anyhow::Result;
 use figment::{
     providers::{Env, Format, Toml},
@@ -46,7 +47,7 @@ impl Default for LoggerConfig {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum Verbosity {
     Trace,
     Info,
@@ -273,15 +274,14 @@ fn default_run_mode() -> String {
 impl Config {
     pub fn load(config_dir: &str) -> Result<Self> {
         let run_mode = env::var("RUN_MODE").unwrap_or_else(|_| "dev".to_string());
-        let figment = Figment::from(Config::figment_with_paths(config_dir, &run_mode));
-
+        let figment = Config::figment_with_paths(config_dir, &run_mode)?;
         let config: Config = figment.extract()?;
         let config_value: Value = serde_json::to_value(&config)?;
         let replaced = expand_tokens(&config_value);
         serde_json::from_value(replaced).map_err(Into::into)
     }
 
-    pub fn figment_with_paths(config_dir: &str, run_mode: &str) -> Figment {
+    pub fn figment_with_paths(config_dir: &str, run_mode: &str) -> Result<Figment> {
         let original_env = env::vars().collect::<Vec<_>>();
         for (key, value) in &original_env {
             let new_key = Config::map_env_var(key.to_string());
@@ -294,13 +294,25 @@ impl Config {
         let local_path = absolute_config_dir.join("local.toml");
         let run_mode_path = absolute_config_dir.join(format!("{}.toml", run_mode));
 
-        let mut figment = Figment::new().merge(Toml::file(default_path));
+        let mut figment = Figment::new();
 
-        if local_path.exists() {
-            figment = figment.merge(Toml::file(local_path));
+        let mut file_loaded = false;
+
+        if Path::new(&default_path).exists() {
+            figment = figment.merge(Toml::file(default_path));
+            file_loaded = true;
         }
-        if run_mode_path.exists() {
+        if Path::new(&local_path).exists() {
+            figment = figment.merge(Toml::file(local_path));
+            file_loaded = true;
+        }
+        if Path::new(&run_mode_path).exists() {
             figment = figment.merge(Toml::file(run_mode_path));
+            file_loaded = true;
+        }
+
+        if !file_loaded {
+            return Err(anyhow!("No configuration files found in '{}'", config_dir));
         }
 
         figment = figment.merge(Env::raw());
@@ -309,7 +321,7 @@ impl Config {
             env::set_var(key, value);
         }
 
-        figment
+        Ok(figment)
     }
 
     fn map_env_var(key: String) -> String {
@@ -324,9 +336,8 @@ impl Config {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Write;
-    use std::path::PathBuf;
-    use tempfile::NamedTempFile;
+    use std::{fs, io::Write, path::PathBuf};
+    use tempfile::{tempdir, NamedTempFile};
 
     // Helper function to create a temporary configuration file.
     fn create_temp_config_file(content: &str) -> PathBuf {
@@ -598,15 +609,86 @@ mod tests {
     }
 
     #[test]
-    fn test_load_config_with_temp_file() {
-        let config_path = create_temp_config_file(
-            r#"
+    fn test_config_load_with_local_override() {
+        let config_toml_content = r#"
+            run_mode = "dev"
+    
             [website]
-            public_hostname = "localhost"
-        "#,
+            bind_ports = { http = 8080 }
+            public_ports = { http = 8080 }
+    
+            [session]
+    
+            [routes]
+    
+            [oauth_clients]
+            google = { client_id = "YOUR GOOGLE CLIENT ID", client_secret = "YOUR GOOGLE CLIENT SECRET", auth_uri = "", token_uri = "" }
+            github = { client_id = "xxx", client_secret = "xxx", auth_uri = "https://github.com/login/oauth/authorize", token_uri = "https://github.com/login/oauth/access_token" }
+        "#;
+
+        let local_toml_content = r#"
+            [logger]
+            verbosity = "Debug"
+    
+            [website]
+            bind_ssl_config = { enabled = false }
+            public_ports = { http = 80, https = 443 }
+            public_ssl_enabled = true
+        "#;
+
+        // Create a temporary directory
+        let temp_dir = tempfile::tempdir().expect("Failed to create a temporary directory");
+        let config_dir = temp_dir.path();
+
+        // Simulate loading and merging of TOML files
+        let default_path = config_dir.join("default.toml");
+        let local_path = config_dir.join("local.toml");
+
+        // Load the configuration after default.toml
+        std::fs::write(&default_path, config_toml_content)
+            .expect("Failed to write to temp default.toml file");
+        let loaded_config_after_config_toml = Config::load(config_dir.to_str().unwrap())
+            .expect("Failed to load config after default.toml");
+
+        // Load the configuration after local.toml
+        std::fs::write(&local_path, local_toml_content)
+            .expect("Failed to write to temp local.toml file");
+        let loaded_config_after_local_toml = Config::load(config_dir.to_str().unwrap())
+            .expect("Failed to load config after local.toml");
+
+        // Assertions to verify the loaded configuration
+        assert_eq!(loaded_config_after_local_toml.run_mode, "dev");
+        assert_eq!(loaded_config_after_local_toml.website.bind_ports.http, 8080);
+        assert_eq!(loaded_config_after_local_toml.website.public_ports.http, 80);
+        assert_eq!(
+            loaded_config_after_local_toml.website.public_ports.https,
+            443
+        );
+        assert_eq!(
+            loaded_config_after_local_toml.website.public_ssl_enabled,
+            true
+        );
+        assert_eq!(
+            loaded_config_after_local_toml.logger.verbosity,
+            Verbosity::Debug
         );
 
-        let config = Config::load(config_path.to_str().unwrap()).expect("Failed to load config");
-        assert_eq!(config.website.public_hostname, "localhost");
+        // Check for existence of OAuth clients and then assert
+        if let Some(google_client) = loaded_config_after_local_toml.oauth_clients.get("google") {
+            assert_eq!(google_client.client_id.to_string(), "YOUR GOOGLE CLIENT ID");
+            assert_eq!(
+                google_client.client_secret.secret(),
+                "YOUR GOOGLE CLIENT SECRET"
+            );
+        } else {
+            panic!("Google client configuration not found");
+        }
+
+        if let Some(github_client) = loaded_config_after_local_toml.oauth_clients.get("github") {
+            assert_eq!(github_client.client_id.to_string(), "xxx");
+            assert_eq!(github_client.client_secret.secret(), "xxx");
+        } else {
+            panic!("GitHub client configuration not found");
+        }
     }
 }

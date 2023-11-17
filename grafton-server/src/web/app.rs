@@ -30,27 +30,30 @@ impl App {
         app_ctx: Arc<AppContext>,
         session_layer: SessionManagerLayer<MemoryStore>,
     ) -> Result<Self, AppError> {
-        let client_id = app_ctx.config.oauth_clients["github"].client_id.clone();
-        let client_secret = app_ctx.config.oauth_clients["github"].client_secret.clone();
+        let github_client = app_ctx
+            .config
+            .oauth_clients
+            .get("github")
+            .ok_or(AppError::ClientConfigNotFound("github".to_string()))?;
 
-        let auth_url = AuthUrl::new(app_ctx.config.oauth_clients["github"].auth_uri.clone())
+        let client_id = github_client.client_id.clone();
+        let client_secret = github_client.client_secret.clone();
+
+        let auth_url = AuthUrl::new(github_client.auth_uri.clone())
             .map_err(|e| AppError::InvalidAuthUrl(e.to_string()))?;
-        let token_url = TokenUrl::new(app_ctx.config.oauth_clients["github"].token_uri.clone())
+        let token_url = TokenUrl::new(github_client.token_uri.clone())
             .map_err(|e| AppError::InvalidTokenUrl(e.to_string()))?;
-        let client = BasicClient::new(client_id, Some(client_secret), auth_url, Some(token_url));
-        let db = match SqlitePool::connect(":memory:").await {
-            Ok(pool) => pool,
-            Err(e) => {
-                return Err(AppError::DatabaseConnectionError(e.to_string()));
-            }
-        };
 
-        match sqlx::migrate!().run(&db).await {
-            Ok(_) => (),
-            Err(e) => {
-                return Err(AppError::DatabaseMigrationError(e.to_string()));
-            }
-        }
+        let client = BasicClient::new(client_id, Some(client_secret), auth_url, Some(token_url));
+
+        let db = SqlitePool::connect(":memory:")
+            .await
+            .map_err(|e| AppError::DatabaseConnectionError(e.to_string()))?;
+
+        sqlx::migrate!()
+            .run(&db)
+            .await
+            .map_err(|e| AppError::DatabaseMigrationError(e.to_string()))?;
 
         Ok(Self {
             db,

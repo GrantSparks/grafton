@@ -12,7 +12,7 @@ use tokio::signal;
 
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
-    let config = match Config::load("./config") {
+    let config = match Config::load("examples/chatgpt-plugin/config") {
         Ok(cfg) => cfg,
         Err(e) => {
             error!("Failed to load config: {}", e);

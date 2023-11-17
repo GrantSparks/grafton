@@ -30,6 +30,8 @@ rbac = ["oso"]
 
 [dev-dependencies]
 tempfile = "*"
+toml = "*"
+fs = "*"
 
 [dependencies]
 anyhow = "*"

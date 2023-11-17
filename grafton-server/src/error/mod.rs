@@ -26,6 +26,7 @@ pub enum AppError {
     InvalidTokenUrl(String),
     ConfigError(String),
     IoError(std::io::Error),
+    ClientConfigNotFound(String),
 }
 
 impl fmt::Display for AppError {
@@ -48,6 +49,9 @@ impl fmt::Display for AppError {
             AppError::InvalidTokenUrl(err) => write!(f, "Invalid token URL: {}", err),
             AppError::ConfigError(err) => write!(f, "Invalid config: {}", err),
             AppError::IoError(err) => write!(f, "I/O error: {}", err),
+            AppError::ClientConfigNotFound(err) => {
+                write!(f, "Client configuration not found: {}", err)
+            }
         }
     }
 }
@@ -107,6 +111,9 @@ impl From<AppError> for Status {
             }
             AppError::ConfigError(err) => Status::internal(format!("Invalid config: {}", err)),
             AppError::IoError(err) => tonic::Status::internal(format!("I/O error: {}", err)),
+            AppError::ClientConfigNotFound(err) => {
+                Status::internal(format!("Client configuration not found: {}", err))
+            }
         }
     }
 }
