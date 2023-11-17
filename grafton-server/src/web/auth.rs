@@ -99,6 +99,7 @@ pub struct Credentials {
     pub code: String,
     pub old_state: CsrfToken,
     pub new_state: CsrfToken,
+    pub provider: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -157,20 +158,49 @@ impl AuthnBackend for Backend {
             .await
             .map_err(Self::Error::OAuth2)?;
 
-        // Use access token to request user info.
-        let user_info = reqwest::Client::new()
-            .get("https://api.github.com/user")
-            .header(USER_AGENT, "axum-login") // See: https://docs.github.com/en/rest/overview/resources-in-the-rest-api?apiVersion=2022-11-28#user-agent-required
-            .header(
-                AUTHORIZATION,
-                format!("Bearer {}", token_res.access_token().secret()),
-            )
-            .send()
-            .await
-            .map_err(Self::Error::Reqwest)?
-            .json::<UserInfo>()
-            .await
-            .map_err(Self::Error::Reqwest)?;
+        let login_id;
+        match creds.provider.as_str() {
+            "github" => {
+                // Use access token to request user info.
+                let user_info = reqwest::Client::new()
+                    .get("https://api.github.com/user")
+                    .header(USER_AGENT, "axum-login") // See: https://docs.github.com/en/rest/overview/resources-in-the-rest-api?apiVersion=2022-11-28#user-agent-required
+                    .header(
+                        AUTHORIZATION,
+                        format!("Bearer {}", token_res.access_token().secret()),
+                    )
+                    .send()
+                    .await
+                    .map_err(Self::Error::Reqwest)?
+                    .json::<UserInfo>()
+                    .await
+                    .map_err(Self::Error::Reqwest)?;
+
+                login_id = user_info.login;
+            }
+            "google" => {
+                // Use access token to request user info.
+                let user_info = reqwest::Client::new()
+                    .get("https://www.googleapis.com/oauth2/v3/userinfo")
+                    .header(
+                        AUTHORIZATION,
+                        format!("Bearer {}", token_res.access_token().secret()),
+                    )
+                    .send()
+                    .await
+                    .map_err(Self::Error::Reqwest)?
+                    .json::<UserInfo>()
+                    .await
+                    .map_err(Self::Error::Reqwest)?;
+
+                login_id = user_info.login;
+            }
+            _ => {
+                return Err(BackendError::OAuth2(BasicRequestTokenError::Other(
+                    format!("Unsupported provider `{}`.", creds.provider),
+                )))
+            }
+        }
 
         // Persist user in our database so we can use `get_user`.
         let user = sqlx::query_as(
@@ -182,7 +212,7 @@ impl AuthnBackend for Backend {
             returning *
             "#,
         )
-        .bind(user_info.login)
+        .bind(login_id)
         .bind(token_res.access_token().secret())
         .fetch_one(&self.db)
         .await

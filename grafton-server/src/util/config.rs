@@ -336,21 +336,6 @@ impl Config {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::{fs, io::Write, path::PathBuf};
-    use tempfile::{tempdir, NamedTempFile};
-
-    // Helper function to create a temporary configuration file.
-    fn create_temp_config_file(content: &str) -> PathBuf {
-        let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
-        write!(temp_file, "{}", content).expect("Failed to write to temp file");
-
-        // Persist the file and get its path
-        temp_file
-            .into_temp_path()
-            .keep()
-            .expect("Failed to keep temp file")
-            .to_path_buf()
-    }
 
     #[test]
     fn test_base_prepend() {
@@ -644,13 +629,8 @@ mod tests {
         let default_path = config_dir.join("default.toml");
         let local_path = config_dir.join("local.toml");
 
-        // Load the configuration after default.toml
         std::fs::write(&default_path, config_toml_content)
             .expect("Failed to write to temp default.toml file");
-        let loaded_config_after_config_toml = Config::load(config_dir.to_str().unwrap())
-            .expect("Failed to load config after default.toml");
-
-        // Load the configuration after local.toml
         std::fs::write(&local_path, local_toml_content)
             .expect("Failed to write to temp local.toml file");
         let loaded_config_after_local_toml = Config::load(config_dir.to_str().unwrap())

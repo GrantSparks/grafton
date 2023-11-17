@@ -3,7 +3,7 @@ use std::sync::Arc;
 use axum_login::{
     axum,
     axum::{
-        extract::Query,
+        extract::{Path, Query},
         response::{IntoResponse, Redirect},
         routing::get,
     },
@@ -28,7 +28,7 @@ pub struct AuthzResp {
 }
 
 pub fn router() -> axum::Router<Arc<AppContext>> {
-    axum::Router::new().route("/oauth/callback", get(self::get::callback))
+    axum::Router::new().route("/oauth/:provider/callback", get(self::get::callback))
 }
 
 mod get {
@@ -39,6 +39,7 @@ mod get {
     pub async fn callback(
         mut auth_session: AuthSession,
         session: Session,
+        Path(provider): Path<String>,
         Query(AuthzResp {
             code,
             state: new_state,
@@ -52,6 +53,7 @@ mod get {
             code,
             old_state,
             new_state,
+            provider
         };
 
         let user = match auth_session.authenticate(creds).await {
