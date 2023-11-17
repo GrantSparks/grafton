@@ -53,7 +53,7 @@ mod get {
             code,
             old_state,
             new_state,
-            provider
+            provider,
         };
 
         let user = match auth_session.authenticate(creds).await {

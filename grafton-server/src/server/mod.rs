@@ -49,7 +49,7 @@ pub async fn create_grafton_router(config: Config) -> Result<axum::Router, AppEr
     let app = match app_result {
         Ok(app) => app,
         Err(e) => {
-            return Err(AppError::from(e));
+            return Err(e);
         }
     };
 

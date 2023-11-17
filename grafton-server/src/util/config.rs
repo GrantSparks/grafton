@@ -19,47 +19,26 @@ pub fn load_config(config_dir: &str) -> Result<Arc<Config>> {
     Ok(Arc::new(config))
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Default, Debug, Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct SessionConfig {
     pub same_site_policy: SameSiteConfig,
 }
 
-impl Default for SessionConfig {
-    fn default() -> Self {
-        SessionConfig {
-            same_site_policy: SameSiteConfig::default(),
-        }
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Default, Debug, Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct LoggerConfig {
     pub verbosity: Verbosity,
 }
 
-impl Default for LoggerConfig {
-    fn default() -> Self {
-        LoggerConfig {
-            verbosity: Verbosity::default(),
-        }
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Default, Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum Verbosity {
     Trace,
+    #[default]
     Info,
     Debug,
     Warn,
     Error,
-}
-
-impl Default for Verbosity {
-    fn default() -> Self {
-        Verbosity::Info
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -182,17 +161,12 @@ impl Default for Website {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Default, Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum SameSiteConfig {
     Strict,
+    #[default]
     Lax,
     None,
-}
-
-impl Default for SameSiteConfig {
-    fn default() -> Self {
-        SameSiteConfig::Lax
-    }
 }
 
 impl fmt::Display for SameSiteConfig {
@@ -276,7 +250,7 @@ impl Config {
         let run_mode = env::var("RUN_MODE").unwrap_or_else(|_| "dev".to_string());
         let figment = Config::figment_with_paths(config_dir, &run_mode)?;
         let config: Config = figment.extract()?;
-        let config_value: Value = serde_json::to_value(&config)?;
+        let config_value: Value = serde_json::to_value(config)?;
         let replaced = expand_tokens(&config_value);
         serde_json::from_value(replaced).map_err(Into::into)
     }
@@ -329,7 +303,6 @@ impl Config {
             .replace("WEBSITE_", "WEBSITE.")
             .replace("SESSION_", "SESSION.")
             .replace("LOGGER_", "LOGGER.")
-            .into()
     }
 }
 
@@ -469,10 +442,11 @@ mod tests {
 
     #[test]
     fn test_with_base_prepend() {
-        let mut routes = Routes::default();
-        routes.base = "/api".to_string();
-        routes.public_home = "home".to_string();
-        routes.public_error = "/error".to_string();
+        let routes = Routes {
+            base: "/api".to_string(),
+            public_home: "home".to_string(),
+            public_error: "/error".to_string(),
+        };
 
         let new_routes = routes.with_base_prepend();
         assert_eq!(new_routes.base, "/api/");
@@ -629,9 +603,9 @@ mod tests {
         let default_path = config_dir.join("default.toml");
         let local_path = config_dir.join("local.toml");
 
-        std::fs::write(&default_path, config_toml_content)
+        std::fs::write(default_path, config_toml_content)
             .expect("Failed to write to temp default.toml file");
-        std::fs::write(&local_path, local_toml_content)
+        std::fs::write(local_path, local_toml_content)
             .expect("Failed to write to temp local.toml file");
         let loaded_config_after_local_toml = Config::load(config_dir.to_str().unwrap())
             .expect("Failed to load config after local.toml");
@@ -644,10 +618,7 @@ mod tests {
             loaded_config_after_local_toml.website.public_ports.https,
             443
         );
-        assert_eq!(
-            loaded_config_after_local_toml.website.public_ssl_enabled,
-            true
-        );
+        assert!(loaded_config_after_local_toml.website.public_ssl_enabled);
         assert_eq!(
             loaded_config_after_local_toml.logger.verbosity,
             Verbosity::Debug
