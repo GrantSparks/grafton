@@ -2,6 +2,14 @@
 name = "chatgpt-plugin"
 version = "0.1.0"
 edition = "2021"
+include = [
+    "Cargo.toml",
+    "LICENSE",
+    "README.md",
+    "config/default.toml",
+    "config/policies.polar",
+    "src/**/*",
+]
 
 [dependencies]
 axum = "*"

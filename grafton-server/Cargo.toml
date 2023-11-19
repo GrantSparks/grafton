@@ -8,9 +8,10 @@ include = [
     "Cargo.toml",
     "LICENSE",
     "README.md",
-    "config/default.toml",
-    "config/policies.polar",
+    "build.rs",
     "src/**/*",
+    "migrations/**/*",
+    "templates/**/*",
 ]
 keywords = ["api", "web", "http", "server", "networking", "ai"]
 license = "Apache-2.0"
