@@ -44,7 +44,7 @@ pub enum Verbosity {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct Pages {
-    pub base: String,
+    pub root: String,
     pub public_home: String,
     pub public_error: String,
     pub public_login: String,
@@ -53,7 +53,7 @@ pub struct Pages {
 impl Default for Pages {
     fn default() -> Self {
         Pages {
-            base: "/".to_string(),
+            root: "/".to_string(),
             public_home: "".to_string(),
             public_error: "error".to_string(),
             public_login: "login".to_string(),
@@ -62,10 +62,11 @@ impl Default for Pages {
 }
 
 impl Pages {
-    pub fn with_base_prepend(&self) -> Self {
-        let normalized_base = self.normalize_slash(&self.base);
+    /// Returns a new `Pages` struct with the `root` path prepended to all paths.
+    pub fn with_root(&self) -> Self {
+        let normalized_base = self.normalize_slash(&self.root);
         Self {
-            base: normalized_base.clone(),
+            root: normalized_base.clone(),
             public_home: self.join_paths(&normalized_base, &self.public_home),
             public_error: self.join_paths(&normalized_base, &self.public_error),
             public_login: self.join_paths(&normalized_base, &self.public_login),
@@ -317,13 +318,13 @@ mod tests {
     #[test]
     fn test_base_prepend() {
         let pages = Pages {
-            base: "/api".to_string(),
+            root: "/api".to_string(),
             public_home: "home".to_string(),
             public_error: "/error".to_string(),
             public_login: "login".to_string(),
         };
 
-        let updated_pages = pages.with_base_prepend();
+        let updated_pages = pages.with_root();
         assert_eq!(updated_pages.public_home, "/api/home");
         assert_eq!(updated_pages.public_error, "/api/error");
         assert_eq!(updated_pages.public_login, "/api/login");
@@ -332,13 +333,13 @@ mod tests {
     #[test]
     fn test_base_prepend_with_trailing_slash() {
         let pages = Pages {
-            base: "/api/".to_string(),
+            root: "/api/".to_string(),
             public_home: "home".to_string(),
             public_error: "error".to_string(),
             public_login: "login".to_string(),
         };
 
-        let updated_pages = pages.with_base_prepend();
+        let updated_pages = pages.with_root();
         assert_eq!(updated_pages.public_home, "/api/home");
         assert_eq!(updated_pages.public_error, "/api/error");
         assert_eq!(updated_pages.public_login, "/api/login");
@@ -347,13 +348,13 @@ mod tests {
     #[test]
     fn test_base_prepend_with_empty_and_root_pages() {
         let pages = Pages {
-            base: "/".to_string(),
+            root: "/".to_string(),
             public_home: "".to_string(),
             public_error: "/".to_string(),
             public_login: "/".to_string(),
         };
 
-        let updated_pages = pages.with_base_prepend();
+        let updated_pages = pages.with_root();
         assert_eq!(updated_pages.public_home, "/");
         assert_eq!(updated_pages.public_error, "/");
         assert_eq!(updated_pages.public_login, "/");
@@ -428,7 +429,7 @@ mod tests {
         }"#;
 
         let deserialized: Pages = serde_json::from_str(json).expect("Deserialization failed");
-        assert_eq!(deserialized.base, "/api");
+        assert_eq!(deserialized.root, "/api");
         assert_eq!(deserialized.public_home, "/home");
         assert_eq!(deserialized.public_error, "/error");
     }
@@ -453,14 +454,14 @@ mod tests {
     #[test]
     fn test_with_base_prepend() {
         let pages = Pages {
-            base: "/api".to_string(),
+            root: "/api".to_string(),
             public_home: "home".to_string(),
             public_error: "/error".to_string(),
             public_login: "login".to_string(),
         };
 
-        let new_pages = pages.with_base_prepend();
-        assert_eq!(new_pages.base, "/api/");
+        let new_pages = pages.with_root();
+        assert_eq!(new_pages.root, "/api/");
         assert_eq!(new_pages.public_home, "/api/home");
         assert_eq!(new_pages.public_error, "/api/error");
         assert_eq!(new_pages.public_login, "/api/login");
