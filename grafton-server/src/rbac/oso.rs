@@ -19,7 +19,7 @@ pub fn initialize_oso(config: &Config) -> Result<Oso, AppError> {
             .build(),
     )?;
 
-    oso.load_files(config.website.oso_policy_files.clone())?;
+    oso.load_files(config.oso_policy_files.clone())?;
 
     Ok(oso)
 }

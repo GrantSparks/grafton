@@ -113,9 +113,6 @@ pub struct Website {
     #[derivative(Default(value = "false"))]
     pub public_ssl_enabled: bool,
 
-    #[derivative(Default(value = "Vec::new()"))]
-    pub oso_policy_files: Vec<String>,
-
     #[derivative(Default)]
     #[serde(default)]
     pub pages: Pages,
@@ -223,7 +220,8 @@ pub struct ClientConfig {
     pub extra: Map<String, Value>,
 }
 
-#[derive(Default, Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Derivative, Clone)]
+#[derivative(Default)]
 #[serde(default)]
 pub struct Config {
     #[serde(default = "default_run_mode")]
@@ -235,6 +233,8 @@ pub struct Config {
     #[serde(default)]
     pub session: SessionConfig,
     pub oauth_clients: HashMap<String, ClientConfig>,
+    #[derivative(Default(value = "Vec::new()"))]
+    pub oso_policy_files: Vec<String>,
 }
 
 fn default_run_mode() -> String {
