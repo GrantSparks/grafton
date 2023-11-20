@@ -1,7 +1,7 @@
-use std::{collections::HashMap, env, path::Path, sync::Arc};
+use std::{collections::HashMap, env, net::IpAddr, path::Path, sync::Arc};
 
-use anyhow::anyhow;
-use anyhow::Result;
+use anyhow::{anyhow, Result};
+use derivative::Derivative;
 use figment::{
     providers::{Env, Format, Toml},
     Figment,
@@ -45,24 +45,18 @@ pub enum Verbosity {
     Error,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Derivative, Clone)]
+#[derivative(Default)]
 #[serde(default)]
 pub struct Pages {
+    #[derivative(Default(value = "\"/\".into()"))]
     pub root: String,
+    #[derivative(Default(value = "\"\".into()"))]
     pub public_home: String,
+    #[derivative(Default(value = "\"error\".into()"))]
     pub public_error: String,
+    #[derivative(Default(value = "\"login\".into()"))]
     pub public_login: String,
-}
-
-impl Default for Pages {
-    fn default() -> Self {
-        Pages {
-            root: "/".to_string(),
-            public_home: "".to_string(),
-            public_error: "error".to_string(),
-            public_login: "login".to_string(),
-        }
-    }
 }
 
 impl Pages {
@@ -92,18 +86,38 @@ impl Pages {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Derivative, Clone)]
+#[derivative(Default)]
 #[serde(default)]
 pub struct Website {
+    #[derivative(Default(value = "\"../public/www\".into()"))]
     pub web_root: String,
+
+    #[derivative(Default(value = "\"index.html\".into()"))]
     pub index_page: String,
+
+    #[derivative(Default)]
     pub bind_ssl_config: SslConfig,
-    pub bind_address: std::net::IpAddr,
+
+    #[derivative(Default(value = "\"127.0.0.1\".parse().unwrap()"))]
+    pub bind_address: IpAddr,
+
+    #[derivative(Default)]
     pub bind_ports: Ports,
+
+    #[derivative(Default(value = "\"localhost\".into()"))]
     pub public_hostname: String,
+
+    #[derivative(Default)]
     pub public_ports: Ports,
+
+    #[derivative(Default(value = "false"))]
     pub public_ssl_enabled: bool,
+
+    #[derivative(Default(value = "Vec::new()"))]
     pub oso_policy_files: Vec<String>,
+
+    #[derivative(Default)]
     #[serde(default)]
     pub pages: Pages,
 }
@@ -155,23 +169,6 @@ impl Website {
     }
 }
 
-impl Default for Website {
-    fn default() -> Self {
-        Website {
-            public_hostname: "localhost".into(),
-            public_ports: Ports::default(),
-            public_ssl_enabled: false,
-            bind_address: "127.0.0.1".parse().expect("Invalid IP address"),
-            bind_ssl_config: SslConfig::default(),
-            index_page: "index.html".into(),
-            web_root: "../public/www".into(),
-            bind_ports: Ports::default(),
-            oso_policy_files: vec![],
-            pages: Pages::default(),
-        }
-    }
-}
-
 #[derive(
     Default, Display, EnumString, EnumVariantNames, Debug, Serialize, Deserialize, Clone, PartialEq,
 )]
@@ -183,40 +180,28 @@ pub enum SameSiteConfig {
     None,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Derivative, Clone)]
+#[derivative(Default)]
 #[serde(default)]
 pub struct SslConfig {
+    #[derivative(Default(value = "false"))]
     pub enabled: bool,
+    #[derivative(Default(value = "\"config/cert.pem\".into()"))]
     pub cert_path: String,
+    #[derivative(Default(value = "\"config/key.pem\".into()"))]
     pub key_path: String,
 }
 
-impl Default for SslConfig {
-    fn default() -> Self {
-        SslConfig {
-            enabled: false,
-            cert_path: "config/cert.pem".to_string(),
-            key_path: "config/key.pem".to_string(),
-        }
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Derivative, Clone)]
+#[derivative(Default)]
 #[serde(default)]
 pub struct Ports {
+    #[derivative(Default(value = "80"))]
     pub http: u16,
+    #[derivative(Default(value = "443"))]
     pub https: u16,
+    #[derivative(Default(value = "9339"))]
     pub grpc: u16,
-}
-
-impl Default for Ports {
-    fn default() -> Self {
-        Ports {
-            http: 80,
-            https: 443,
-            grpc: 9339,
-        }
-    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

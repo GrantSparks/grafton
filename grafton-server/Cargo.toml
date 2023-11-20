@@ -48,6 +48,7 @@ tracing-appender = "*"
 tracing-subscriber = "*"
 url = "*"
 askama_axum = "*"
+derivative = "*"
 
 [dependencies.axum-server]
 features = ["tls-rustls"]
