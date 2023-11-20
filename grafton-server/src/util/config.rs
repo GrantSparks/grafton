@@ -43,29 +43,32 @@ pub enum Verbosity {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(default)]
-pub struct Routes {
-    base: String,
-    public_home: String,
-    public_error: String,
+pub struct Pages {
+    pub base: String,
+    pub public_home: String,
+    pub public_error: String,
+    pub public_login: String,
 }
 
-impl Default for Routes {
+impl Default for Pages {
     fn default() -> Self {
-        Routes {
+        Pages {
             base: "/".to_string(),
             public_home: "".to_string(),
             public_error: "error".to_string(),
+            public_login: "login".to_string(),
         }
     }
 }
 
-impl Routes {
+impl Pages {
     pub fn with_base_prepend(&self) -> Self {
         let normalized_base = self.normalize_slash(&self.base);
         Self {
             base: normalized_base.clone(),
             public_home: self.join_paths(&normalized_base, &self.public_home),
             public_error: self.join_paths(&normalized_base, &self.public_error),
+            public_login: self.join_paths(&normalized_base, &self.public_login),
         }
     }
 
@@ -96,6 +99,8 @@ pub struct Website {
     pub public_ports: Ports,
     pub public_ssl_enabled: bool,
     pub oso_policy_files: Vec<String>,
+    #[serde(default)]
+    pub pages: Pages,
 }
 
 impl Website {
@@ -157,6 +162,7 @@ impl Default for Website {
             web_root: "../public/www".into(),
             bind_ports: Ports::default(),
             oso_policy_files: vec![],
+            pages: Pages::default(),
         }
     }
 }
@@ -236,8 +242,6 @@ pub struct Config {
     pub website: Website,
     #[serde(default)]
     pub session: SessionConfig,
-    #[serde(default)]
-    pub routes: Routes,
     pub oauth_clients: HashMap<String, ClientConfig>,
 }
 
@@ -312,41 +316,47 @@ mod tests {
 
     #[test]
     fn test_base_prepend() {
-        let routes = Routes {
+        let pages = Pages {
             base: "/api".to_string(),
             public_home: "home".to_string(),
             public_error: "/error".to_string(),
+            public_login: "login".to_string(),
         };
 
-        let updated_routes = routes.with_base_prepend();
-        assert_eq!(updated_routes.public_home, "/api/home");
-        assert_eq!(updated_routes.public_error, "/api/error");
+        let updated_pages = pages.with_base_prepend();
+        assert_eq!(updated_pages.public_home, "/api/home");
+        assert_eq!(updated_pages.public_error, "/api/error");
+        assert_eq!(updated_pages.public_login, "/api/login");
     }
 
     #[test]
     fn test_base_prepend_with_trailing_slash() {
-        let routes = Routes {
+        let pages = Pages {
             base: "/api/".to_string(),
             public_home: "home".to_string(),
             public_error: "error".to_string(),
+            public_login: "login".to_string(),
         };
 
-        let updated_routes = routes.with_base_prepend();
-        assert_eq!(updated_routes.public_home, "/api/home");
-        assert_eq!(updated_routes.public_error, "/api/error");
+        let updated_pages = pages.with_base_prepend();
+        assert_eq!(updated_pages.public_home, "/api/home");
+        assert_eq!(updated_pages.public_error, "/api/error");
+        assert_eq!(updated_pages.public_login, "/api/login");
     }
 
     #[test]
-    fn test_base_prepend_with_empty_and_root_routes() {
-        let routes = Routes {
+    fn test_base_prepend_with_empty_and_root_pages() {
+        let pages = Pages {
             base: "/".to_string(),
             public_home: "".to_string(),
             public_error: "/".to_string(),
+            public_login: "/".to_string(),
         };
 
-        let updated_routes = routes.with_base_prepend();
-        assert_eq!(updated_routes.public_home, "/");
-        assert_eq!(updated_routes.public_error, "/");
+        let updated_pages = pages.with_base_prepend();
+        assert_eq!(updated_pages.public_home, "/");
+        assert_eq!(updated_pages.public_error, "/");
+        assert_eq!(updated_pages.public_login, "/");
     }
 
     fn create_website(
@@ -410,14 +420,14 @@ mod tests {
     }
 
     #[test]
-    fn test_routes_deserialization() {
+    fn test_pages_deserialization() {
         let json = r#"{
             "base": "/api",
             "public_home": "/home",
             "public_error": "/error"
         }"#;
 
-        let deserialized: Routes = serde_json::from_str(json).expect("Deserialization failed");
+        let deserialized: Pages = serde_json::from_str(json).expect("Deserialization failed");
         assert_eq!(deserialized.base, "/api");
         assert_eq!(deserialized.public_home, "/home");
         assert_eq!(deserialized.public_error, "/error");
@@ -425,33 +435,35 @@ mod tests {
 
     #[test]
     fn test_normalize_slash() {
-        let routes = Routes::default();
-        assert_eq!(routes.normalize_slash("path"), "path/");
-        assert_eq!(routes.normalize_slash("path/"), "path/");
+        let pages = Pages::default();
+        assert_eq!(pages.normalize_slash("path"), "path/");
+        assert_eq!(pages.normalize_slash("path/"), "path/");
     }
 
     #[test]
     fn test_join_paths() {
-        let routes = Routes::default();
-        assert_eq!(routes.join_paths("/base", "/path"), "/base/path");
-        assert_eq!(routes.join_paths("/base/", "/path"), "/base/path");
-        assert_eq!(routes.join_paths("/base", "path"), "/base/path");
-        assert_eq!(routes.join_paths("/base/", "path"), "/base/path");
-        assert_eq!(routes.join_paths("/base/", "//path"), "/base/path");
+        let pages = Pages::default();
+        assert_eq!(pages.join_paths("/base", "/path"), "/base/path");
+        assert_eq!(pages.join_paths("/base/", "/path"), "/base/path");
+        assert_eq!(pages.join_paths("/base", "path"), "/base/path");
+        assert_eq!(pages.join_paths("/base/", "path"), "/base/path");
+        assert_eq!(pages.join_paths("/base/", "//path"), "/base/path");
     }
 
     #[test]
     fn test_with_base_prepend() {
-        let routes = Routes {
+        let pages = Pages {
             base: "/api".to_string(),
             public_home: "home".to_string(),
             public_error: "/error".to_string(),
+            public_login: "login".to_string(),
         };
 
-        let new_routes = routes.with_base_prepend();
-        assert_eq!(new_routes.base, "/api/");
-        assert_eq!(new_routes.public_home, "/api/home");
-        assert_eq!(new_routes.public_error, "/api/error");
+        let new_pages = pages.with_base_prepend();
+        assert_eq!(new_pages.base, "/api/");
+        assert_eq!(new_pages.public_home, "/api/home");
+        assert_eq!(new_pages.public_error, "/api/error");
+        assert_eq!(new_pages.public_login, "/api/login");
     }
 
     #[test]
@@ -578,7 +590,7 @@ mod tests {
     
             [session]
     
-            [routes]
+            [pages]
     
             [oauth_clients]
             google = { client_id = "YOUR GOOGLE CLIENT ID", client_secret = "YOUR GOOGLE CLIENT SECRET", auth_uri = "", token_uri = "" }
