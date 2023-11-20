@@ -24,7 +24,7 @@ fn create_session_layer() -> SessionManagerLayer<MemoryStore> {
         .with_expiry(Expiry::OnInactivity(Duration::days(1)))
 }
 
-pub async fn create_grafton_router(config: Config) -> Result<axum::Router, AppError> {
+pub async fn create_grafton_router(config: Arc<Config>) -> Result<axum::Router, AppError> {
     let _logger_guard = TracingLogger::from_config(&config);
 
     let context = {
@@ -32,7 +32,7 @@ pub async fn create_grafton_router(config: Config) -> Result<axum::Router, AppEr
         {
             use crate::rbac::initialize;
             let oso = initialize(&config)?;
-            AppContext::new(config, oso)?
+            AppContext::new(Arc::as_ref(&config).clone(), oso)?
         }
         #[cfg(not(feature = "rbac"))]
         {

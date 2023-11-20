@@ -9,4 +9,4 @@ mod rbac;
 
 pub use error::AppError;
 pub use tracing;
-pub use util::Config;
+pub use util::{read_config_from_dir, Config};

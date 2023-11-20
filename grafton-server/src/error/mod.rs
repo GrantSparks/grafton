@@ -35,6 +35,12 @@ pub enum AppError {
     OAuth2(BasicRequestTokenError<AsyncHttpClientError>),
 }
 
+impl From<anyhow::Error> for AppError {
+    fn from(error: anyhow::Error) -> Self {
+        AppError::ConfigError(error.to_string())
+    }
+}
+
 impl fmt::Display for AppError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {

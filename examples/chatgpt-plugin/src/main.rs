@@ -2,17 +2,18 @@ use std::{net::SocketAddr, path::PathBuf};
 
 use axum_server::tls_rustls::RustlsConfig;
 use grafton_server::{
+    read_config_from_dir,
     server::create_grafton_router,
     server::start_http_server,
     server::start_https_server,
     tracing::{error, info},
-    AppError, Config,
+    AppError,
 };
 use tokio::signal;
 
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
-    let config = match Config::load("examples/chatgpt-plugin/config") {
+    let config = match read_config_from_dir("examples/chatgpt-plugin/config") {
         Ok(cfg) => cfg,
         Err(e) => {
             error!("Failed to load config: {}", e);

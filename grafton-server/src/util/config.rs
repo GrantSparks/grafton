@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env, net::IpAddr, path::Path, sync::Arc};
+use std::{collections::HashMap, env, net::IpAddr, path::Path};
 
 use anyhow::{anyhow, Result};
 use derivative::Derivative;
@@ -12,13 +12,7 @@ use serde_json::{Map, Value};
 use strum::{Display, EnumString, EnumVariantNames};
 use url::Url;
 
-use crate::util::token_expander::expand_tokens;
-
-#[allow(unused)]
-pub fn load_config(config_dir: &str) -> Result<Arc<Config>> {
-    let config = Config::load(config_dir)?;
-    Ok(Arc::new(config))
-}
+use crate::{util::token_expander::expand_tokens, AppError};
 
 #[derive(Default, Debug, Serialize, Deserialize, Clone)]
 #[serde(default)]
@@ -125,7 +119,15 @@ pub struct Website {
 impl Website {
     pub fn public_server_url(&self) -> String {
         let (protocol, port) = self.get_protocol_and_port();
-        self.format_url(protocol, port)
+        match self.format_url(protocol, port) {
+            Ok(url) => url,
+            Err(err) => {
+                // Handle the error, log it, or return a default/fallback URL
+                // For example:
+                eprintln!("Error generating URL: {}", err);
+                String::new() // or a default/fallback URL
+            }
+        }
     }
 
     pub fn format_public_server_url(&self, path: &str) -> String {
@@ -158,14 +160,16 @@ impl Website {
         }
     }
 
-    fn format_url(&self, protocol: &str, port: u16) -> String {
+    fn format_url(&self, protocol: &str, port: u16) -> Result<String, AppError> {
         let base = format!("{}://{}", protocol, self.public_hostname);
-        let mut url = Url::parse(&base).expect("Invalid base URL");
+        let mut url = Url::parse(&base).map_err(|e| AppError::InvalidAuthUrl(e.to_string()))?;
 
         if !Self::is_default_port(protocol, port) {
-            url.set_port(Some(port)).expect("Invalid port");
+            url.set_port(Some(port))
+                .map_err(|_| AppError::InvalidAuthUrl("Invalid port".to_string()))?;
         }
-        url.to_string().trim_end_matches('/').to_string()
+
+        Ok(url.to_string().trim_end_matches('/').to_string())
     }
 }
 
@@ -233,7 +237,7 @@ fn default_run_mode() -> String {
 }
 
 impl Config {
-    pub fn load(config_dir: &str) -> Result<Self> {
+    pub(crate) fn load(config_dir: &str) -> Result<Self> {
         let run_mode = env::var("RUN_MODE").unwrap_or_else(|_| "dev".to_string());
         let figment = Config::figment_with_paths(config_dir, &run_mode)?;
         let config: Config = figment.extract()?;
@@ -242,14 +246,14 @@ impl Config {
         serde_json::from_value(replaced).map_err(Into::into)
     }
 
-    pub fn figment_with_paths(config_dir: &str, run_mode: &str) -> Result<Figment> {
+    fn figment_with_paths(config_dir: &str, run_mode: &str) -> Result<Figment> {
         let original_env = env::vars().collect::<Vec<_>>();
         for (key, value) in &original_env {
             let new_key = Config::map_env_var(key.to_string());
             env::set_var(new_key, value);
         }
 
-        let current_dir = env::current_dir().expect("Failed to get current directory");
+        let current_dir = env::current_dir().map_err(AppError::IoError)?;
         let absolute_config_dir = current_dir.join(config_dir);
         let default_path = absolute_config_dir.join("default.toml");
         let local_path = absolute_config_dir.join("local.toml");
@@ -298,7 +302,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_base_prepend() {
+    fn test_base_prepend() -> Result<(), AppError> {
         let pages = Pages {
             root: "/api".to_string(),
             public_home: "home".to_string(),
@@ -310,6 +314,7 @@ mod tests {
         assert_eq!(updated_pages.public_home, "/api/home");
         assert_eq!(updated_pages.public_error, "/api/error");
         assert_eq!(updated_pages.public_login, "/api/login");
+        Ok(())
     }
 
     #[test]
