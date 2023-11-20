@@ -1,9 +1,14 @@
-use std::{collections::HashMap, env, net::IpAddr, path::Path};
+use std::{
+    collections::HashMap,
+    env,
+    net::IpAddr,
+    path::{Path, PathBuf},
+};
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use derivative::Derivative;
 use figment::{
-    providers::{Env, Format, Toml},
+    providers::{Format, Toml},
     Figment,
 };
 use oauth2::{ClientId, ClientSecret};
@@ -238,63 +243,62 @@ fn default_run_mode() -> String {
 
 impl Config {
     pub(crate) fn load(config_dir: &str) -> Result<Self> {
-        let run_mode = env::var("RUN_MODE").unwrap_or_else(|_| "dev".to_string());
-        let figment = Config::figment_with_paths(config_dir, &run_mode)?;
+        let run_mode = determine_run_mode();
+        let config_paths = setup_config_paths(config_dir, &run_mode);
+
+        let mut figment = Figment::new();
+        for path in config_paths {
+            if path.exists() {
+                let config = load_config_from_file(&path)?;
+                figment = figment.merge(config);
+            } else {
+                println!("Configuration file not found: {:?}", path);
+            }
+        }
+        handle_env_vars();
         let config: Config = figment.extract()?;
         let config_value: Value = serde_json::to_value(config)?;
         let replaced = expand_tokens(&config_value);
         serde_json::from_value(replaced).map_err(Into::into)
     }
+}
 
-    fn figment_with_paths(config_dir: &str, run_mode: &str) -> Result<Figment> {
-        let original_env = env::vars().collect::<Vec<_>>();
-        for (key, value) in &original_env {
-            let new_key = Config::map_env_var(key.to_string());
-            env::set_var(new_key, value);
-        }
+fn determine_run_mode() -> String {
+    env::var("RUN_MODE").unwrap_or_else(|_| "dev".to_string())
+}
 
-        let current_dir = env::current_dir().map_err(AppError::IoError)?;
-        let absolute_config_dir = current_dir.join(config_dir);
-        let default_path = absolute_config_dir.join("default.toml");
-        let local_path = absolute_config_dir.join("local.toml");
-        let run_mode_path = absolute_config_dir.join(format!("{}.toml", run_mode));
+fn setup_config_paths(config_dir: &str, run_mode: &str) -> Vec<PathBuf> {
+    let current_dir = env::current_dir().expect("Failed to get current directory");
+    let absolute_config_dir = current_dir.join(config_dir);
 
-        let mut figment = Figment::new();
+    vec![
+        absolute_config_dir.join("default.toml"),
+        absolute_config_dir.join("local.toml"),
+        absolute_config_dir.join(format!("{}.toml", run_mode)),
+    ]
+}
 
-        let mut file_loaded = false;
-
-        if Path::new(&default_path).exists() {
-            figment = figment.merge(Toml::file(default_path));
-            file_loaded = true;
-        }
-        if Path::new(&local_path).exists() {
-            figment = figment.merge(Toml::file(local_path));
-            file_loaded = true;
-        }
-        if Path::new(&run_mode_path).exists() {
-            figment = figment.merge(Toml::file(run_mode_path));
-            file_loaded = true;
-        }
-
-        if !file_loaded {
-            return Err(anyhow!("No configuration files found in '{}'", config_dir));
-        }
-
-        figment = figment.merge(Env::raw());
-
-        for (key, value) in original_env {
-            env::set_var(key, value);
-        }
-
-        Ok(figment)
+fn load_config_from_file(path: &Path) -> Result<Figment, AppError> {
+    if path.exists() {
+        Ok(Figment::new().merge(Toml::file(path)))
+    } else {
+        Err(AppError::ConfigError(format!("File not found: {:?}", path)))
     }
+}
 
-    fn map_env_var(key: String) -> String {
-        key.as_str()
-            .replace("WEBSITE_", "WEBSITE.")
-            .replace("SESSION_", "SESSION.")
-            .replace("LOGGER_", "LOGGER.")
+fn handle_env_vars() {
+    let original_env = env::vars().collect::<Vec<_>>();
+    for (key, value) in &original_env {
+        let new_key = map_env_var(key);
+        env::set_var(new_key, value);
     }
+}
+
+fn map_env_var(key: &str) -> String {
+    // Example transformation logic; adjust as needed for your application
+    key.replace("WEBSITE_", "WEBSITE.")
+        .replace("SESSION_", "SESSION.")
+        .replace("LOGGER_", "LOGGER.")
 }
 
 #[cfg(test)]
