@@ -38,9 +38,15 @@ async fn main() -> Result<(), AppError> {
         )
         .await?;
 
-        start_https_server(https_addr, make_web_service, ssl_config).await?;
+        match start_https_server(https_addr, make_web_service, ssl_config).await {
+            Ok(_) => info!("HTTPS server started successfully"),
+            Err(e) => error!("Failed to start HTTPS server: {}", e),
+        }
     } else {
-        start_http_server(http_addr, make_web_service).await?;
+        match start_http_server(http_addr, make_web_service).await {
+            Ok(_) => info!("HTTP server started successfully"),
+            Err(e) => error!("Failed to start HTTP server: {}", e),
+        }
     };
 
     info!("Application started successfully");

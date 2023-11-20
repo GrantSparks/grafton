@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env, fmt, path::Path, sync::Arc};
+use std::{collections::HashMap, env, path::Path, sync::Arc};
 
 use anyhow::anyhow;
 use anyhow::Result;
@@ -9,6 +9,7 @@ use figment::{
 use oauth2::{ClientId, ClientSecret};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
+use strum::{Display, EnumString, EnumVariantNames};
 use url::Url;
 
 use crate::util::token_expander::expand_tokens;
@@ -31,7 +32,10 @@ pub struct LoggerConfig {
     pub verbosity: Verbosity,
 }
 
-#[derive(Default, Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(
+    Default, EnumString, EnumVariantNames, Debug, Serialize, Deserialize, Clone, PartialEq,
+)]
+#[strum(serialize_all = "snake_case")]
 pub enum Verbosity {
     Trace,
     #[default]
@@ -168,22 +172,15 @@ impl Default for Website {
     }
 }
 
-#[derive(Default, Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(
+    Default, Display, EnumString, EnumVariantNames, Debug, Serialize, Deserialize, Clone, PartialEq,
+)]
+#[strum(serialize_all = "snake_case")]
 pub enum SameSiteConfig {
     Strict,
     #[default]
     Lax,
     None,
-}
-
-impl fmt::Display for SameSiteConfig {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            SameSiteConfig::Strict => write!(f, "Strict"),
-            SameSiteConfig::Lax => write!(f, "Lax"),
-            SameSiteConfig::None => write!(f, "None"),
-        }
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -423,7 +420,7 @@ mod tests {
     #[test]
     fn test_pages_deserialization() {
         let json = r#"{
-            "base": "/api",
+            "root": "/api",
             "public_home": "/home",
             "public_error": "/error"
         }"#;
@@ -444,11 +441,11 @@ mod tests {
     #[test]
     fn test_join_paths() {
         let pages = Pages::default();
-        assert_eq!(pages.join_paths("/base", "/path"), "/base/path");
-        assert_eq!(pages.join_paths("/base/", "/path"), "/base/path");
-        assert_eq!(pages.join_paths("/base", "path"), "/base/path");
-        assert_eq!(pages.join_paths("/base/", "path"), "/base/path");
-        assert_eq!(pages.join_paths("/base/", "//path"), "/base/path");
+        assert_eq!(pages.join_paths("/root", "/path"), "/root/path");
+        assert_eq!(pages.join_paths("/root/", "/path"), "/root/path");
+        assert_eq!(pages.join_paths("/root", "path"), "/root/path");
+        assert_eq!(pages.join_paths("/root/", "path"), "/root/path");
+        assert_eq!(pages.join_paths("/root/", "//path"), "/root/path");
     }
 
     #[test]

@@ -19,7 +19,7 @@ use axum_login::{
 };
 use oauth2::{
     basic::{BasicClient, BasicRequestTokenError},
-    reqwest::{async_http_client, AsyncHttpClientError},
+    reqwest::async_http_client,
     url::Url,
     AuthorizationCode, CsrfToken, TokenResponse,
 };
@@ -29,6 +29,7 @@ use sqlx::SqlitePool;
 use crate::{
     model::{AppContext, User},
     web::oauth::CSRF_STATE_KEY,
+    AppError,
 };
 
 pub const NEXT_URL_KEY: &str = "auth.next-url";
@@ -107,18 +108,6 @@ struct UserInfo {
     login: String,
 }
 
-#[derive(Debug, thiserror::Error)]
-pub enum BackendError {
-    #[error(transparent)]
-    Sqlx(sqlx::Error),
-
-    #[error(transparent)]
-    Reqwest(reqwest::Error),
-
-    #[error(transparent)]
-    OAuth2(BasicRequestTokenError<AsyncHttpClientError>),
-}
-
 #[derive(Debug, Clone)]
 pub struct Backend {
     db: SqlitePool,
@@ -139,7 +128,7 @@ impl Backend {
 impl AuthnBackend for Backend {
     type User = User;
     type Credentials = Credentials;
-    type Error = BackendError;
+    type Error = AppError;
 
     async fn authenticate(
         &self,
@@ -196,9 +185,10 @@ impl AuthnBackend for Backend {
                 login_id = user_info.login;
             }
             _ => {
-                return Err(BackendError::OAuth2(BasicRequestTokenError::Other(
-                    format!("Unsupported provider `{}`.", creds.provider),
-                )))
+                return Err(AppError::OAuth2(BasicRequestTokenError::Other(format!(
+                    "Unsupported provider `{}`.",
+                    creds.provider
+                ))))
             }
         }
 

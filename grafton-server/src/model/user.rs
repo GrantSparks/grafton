@@ -1,6 +1,7 @@
 use axum_login::AuthUser;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use strum::{Display, EnumString, EnumVariantNames};
 
 use super::Identifiable;
 
@@ -9,8 +10,22 @@ use oso::PolarClass;
 
 #[cfg(feature = "rbac")]
 #[derive(
-    Debug, Default, Clone, Serialize, Deserialize, Eq, PartialEq, Hash, PartialOrd, Copy, sqlx::Type,
+    Default,
+    Display,
+    EnumString,
+    EnumVariantNames,
+    Debug,
+    Serialize,
+    Deserialize,
+    Clone,
+    Eq,
+    PartialEq,
+    Hash,
+    PartialOrd,
+    Copy,
+    sqlx::Type,
 )]
+#[strum(serialize_all = "snake_case")]
 pub enum Role {
     #[default]
     None,

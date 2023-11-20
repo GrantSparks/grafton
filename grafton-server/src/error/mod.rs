@@ -1,4 +1,4 @@
-use std::{error::Error, fmt};
+use std::fmt;
 
 #[cfg(feature = "rbac")]
 use {
@@ -6,12 +6,12 @@ use {
     std::sync::{MutexGuard, PoisonError},
 };
 
+use oauth2::{basic::BasicRequestTokenError, reqwest::AsyncHttpClientError};
 #[cfg(feature = "grpc")]
 use tonic::{transport::Error as TonicTransportError, Status};
 
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum AppError {
-    Generic(Box<dyn Error + Send + Sync>),
     #[cfg(feature = "grpc")]
     Grpc(Status),
     #[cfg(feature = "rbac")]
@@ -27,12 +27,17 @@ pub enum AppError {
     ConfigError(String),
     IoError(std::io::Error),
     ClientConfigNotFound(String),
+    #[error(transparent)]
+    Sqlx(sqlx::Error),
+    #[error(transparent)]
+    Reqwest(reqwest::Error),
+    #[error(transparent)]
+    OAuth2(BasicRequestTokenError<AsyncHttpClientError>),
 }
 
 impl fmt::Display for AppError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            AppError::Generic(err) => write!(f, "Generic error: {}", err),
             #[cfg(feature = "grpc")]
             AppError::Grpc(status) => write!(f, "gRPC error: {}", status),
             #[cfg(feature = "rbac")]
@@ -52,21 +57,16 @@ impl fmt::Display for AppError {
             AppError::ClientConfigNotFound(err) => {
                 write!(f, "Client configuration not found: {}", err)
             }
+            AppError::Sqlx(err) => write!(f, "SQLx error: {}", err),
+            AppError::Reqwest(err) => write!(f, "Reqwest error: {}", err),
+            AppError::OAuth2(err) => write!(f, "OAuth2 error: {}", err),
         }
     }
 }
 
-impl Error for AppError {}
-
 impl From<std::io::Error> for AppError {
     fn from(err: std::io::Error) -> Self {
         AppError::IoError(err)
-    }
-}
-
-impl From<Box<dyn Error + Send + Sync>> for AppError {
-    fn from(err: Box<dyn Error + Send + Sync>) -> Self {
-        AppError::Generic(err)
     }
 }
 
@@ -91,7 +91,6 @@ impl From<AppError> for Status {
             AppError::Grpc(status) => status,
             #[cfg(feature = "rbac")]
             AppError::OsoError(err) => Status::internal(format!("Oso error: {}", err)),
-            AppError::Generic(err) => Status::internal(format!("Generic error: {}", err)),
             AppError::PathError(err) => Status::internal(format!("Path error: {}", err)),
             AppError::TonicTransport(err) => {
                 Status::internal(format!("Tonic transport error: {}", err))
@@ -114,6 +113,9 @@ impl From<AppError> for Status {
             AppError::ClientConfigNotFound(err) => {
                 Status::internal(format!("Client configuration not found: {}", err))
             }
+            AppError::Sqlx(err) => Status::internal(format!("SQLx error: {}", err)),
+            AppError::Reqwest(err) => Status::internal(format!("Reqwest error: {}", err)),
+            AppError::OAuth2(err) => Status::internal(format!("OAuth2 error: {}", err)),
         }
     }
 }
