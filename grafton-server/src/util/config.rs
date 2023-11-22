@@ -242,7 +242,7 @@ fn default_run_mode() -> String {
 }
 
 impl Config {
-    pub(crate) fn load(config_dir: &str) -> Result<Self> {
+    pub fn load(config_dir: &str) -> Result<Self> {
         let run_mode = determine_run_mode();
         let config_paths = setup_config_paths(config_dir, &run_mode);
 

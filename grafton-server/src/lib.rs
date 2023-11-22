@@ -1,6 +1,6 @@
 mod error;
 pub mod model;
-pub mod server;
+mod server;
 mod util;
 mod web;
 
@@ -8,5 +8,6 @@ mod web;
 mod rbac;
 
 pub use error::AppError;
+pub use server::ServerBuilder;
 pub use tracing;
-pub use util::{read_config_from_dir, Config};
+pub use util::{Config, TracingLogger};

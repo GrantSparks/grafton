@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use axum_login::{
-    axum,
     axum::{
         extract::{Path, Query},
         response::{IntoResponse, Redirect},
@@ -27,8 +26,8 @@ pub struct AuthzResp {
     state: CsrfToken,
 }
 
-pub fn router() -> axum::Router<Arc<AppContext>> {
-    axum::Router::new().route("/oauth/:provider/callback", get(self::get::callback))
+pub fn router() -> axum_login::axum::Router<Arc<AppContext>> {
+    axum_login::axum::Router::new().route("/oauth/:provider/callback", get(self::get::callback))
 }
 
 mod get {

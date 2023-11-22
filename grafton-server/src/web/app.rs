@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use axum_login::{
-    axum,
     axum::{error_handling::HandleErrorLayer, BoxError},
     http::StatusCode,
     login_required,
@@ -62,7 +61,7 @@ impl App {
         })
     }
 
-    pub async fn create_auth_router(self) -> axum::Router<Arc<AppContext>> {
+    pub async fn create_auth_router(self) -> axum_login::axum::Router<Arc<AppContext>> {
         // Auth service.
         //
         // This combines the session layer with our backend to establish the auth

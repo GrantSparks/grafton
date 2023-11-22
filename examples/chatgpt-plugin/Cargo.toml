@@ -12,7 +12,6 @@ include = [
 ]
 
 [dependencies]
-axum = "*"
 axum-server = "*"
 tokio = "*"
 

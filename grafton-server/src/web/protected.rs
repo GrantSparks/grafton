@@ -15,7 +15,7 @@ struct ProtectedTemplate<'a> {
     username: &'a str,
 }
 
-pub fn router() -> axum::Router<Arc<AppContext>> {
+pub fn router() -> axum_login::axum::Router<Arc<AppContext>> {
     Router::new().route("/", get(protected))
 }
 

@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use askama::Template;
 use axum_login::{
-    axum,
     axum::{
         async_trait,
         extract::Query,
@@ -48,8 +47,8 @@ pub struct NextUrl {
     next: Option<String>,
 }
 
-pub fn router() -> axum::Router<Arc<AppContext>> {
-    axum::Router::new()
+pub fn router() -> axum_login::axum::Router<Arc<AppContext>> {
+    axum_login::axum::Router::new()
         .route("/login", post(self::post::login))
         .route("/login", get(self::get::login))
         .route("/logout", get(self::get::logout))
