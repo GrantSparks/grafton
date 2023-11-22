@@ -6,7 +6,7 @@ use axum_login::{
 };
 use axum_server::tls_rustls::RustlsConfig;
 use time::Duration;
-use tracing::{error, info};
+use tracing::{debug, error};
 
 use crate::{model::AppContext, web::App, AppError, Config};
 
@@ -36,13 +36,13 @@ impl Server {
             .await?;
 
             match start_https_server(https_addr, make_web_service, ssl_config).await {
-                Ok(_) => info!("HTTPS server started successfully"),
-                Err(e) => error!("Failed to start HTTPS server: {}", e),
+                Ok(_) => debug!("grafton server started https"),
+                Err(e) => error!("Failed to start grafton server: {}", e),
             }
         } else {
             match start_http_server(http_addr, make_web_service).await {
-                Ok(_) => info!("HTTP server started successfully"),
-                Err(e) => error!("Failed to start HTTP server: {}", e),
+                Ok(_) => debug!("grafton server started http"),
+                Err(e) => error!("Failed to start grafton server: {}", e),
             }
         };
 
@@ -60,8 +60,8 @@ impl ServerBuilder {
         let context = {
             #[cfg(feature = "rbac")]
             {
-                use crate::rbac::initialize;
-                let oso = initialize(&config)?;
+                use crate::rbac;
+                let oso = rbac::initialize(&config)?;
                 AppContext::new(config, oso)?
             }
             #[cfg(not(feature = "rbac"))]
@@ -111,7 +111,7 @@ async fn start_https_server(
     web_service: IntoMakeService<axum_login::axum::Router>,
     config: RustlsConfig,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
-    info!("https server listening on {}", https_addr);
+    debug!("https listening on {}", https_addr);
 
     tokio::task::spawn(async move {
         axum_server::bind_rustls(https_addr, config)
@@ -126,7 +126,7 @@ async fn start_http_server(
     http_addr: SocketAddr,
     web_service: IntoMakeService<axum_login::axum::Router>,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
-    info!("http server listening on {}", http_addr);
+    debug!("http listening on {}", http_addr);
 
     tokio::task::spawn(async move {
         axum_server::Server::bind(http_addr)

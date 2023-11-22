@@ -19,6 +19,8 @@ use url::Url;
 
 use crate::{util::token_expander::expand_tokens, AppError};
 
+const DEFAULT_CONFIG_FILE: &str = "default.toml";
+
 #[derive(Default, Debug, Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct SessionConfig {
@@ -242,7 +244,7 @@ fn default_run_mode() -> String {
 }
 
 impl Config {
-    pub fn load(config_dir: &str) -> Result<Self> {
+    pub fn load_from_dir(config_dir: &str) -> Result<Self> {
         let run_mode = determine_run_mode();
         let config_paths = setup_config_paths(config_dir, &run_mode);
 
@@ -251,8 +253,13 @@ impl Config {
             if path.exists() {
                 let config = load_config_from_file(&path)?;
                 figment = figment.merge(config);
-            } else {
-                println!("Configuration file not found: {:?}", path);
+            } else if path.file_name().unwrap_or_default() == DEFAULT_CONFIG_FILE {
+                let parent_dir = path.parent().unwrap_or_else(|| Path::new(""));
+                let abs_parent = parent_dir
+                    .canonicalize()
+                    .unwrap_or_else(|_| parent_dir.to_path_buf());
+                let abs_path = abs_parent.join(DEFAULT_CONFIG_FILE);
+                println!("Default configuration file not found: {:?}", abs_path);
             }
         }
         handle_env_vars();
@@ -611,7 +618,7 @@ mod tests {
             .expect("Failed to write to temp default.toml file");
         std::fs::write(local_path, local_toml_content)
             .expect("Failed to write to temp local.toml file");
-        let loaded_config_after_local_toml = Config::load(config_dir.to_str().unwrap())
+        let loaded_config_after_local_toml = Config::load_from_dir(config_dir.to_str().unwrap())
             .expect("Failed to load config after local.toml");
 
         // Assertions to verify the loaded configuration

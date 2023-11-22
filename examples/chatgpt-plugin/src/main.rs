@@ -3,7 +3,7 @@ use tokio::signal;
 
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
-    let config = Config::load("examples/chatgpt-plugin/config")?;
+    let config = Config::load_from_dir("examples/chatgpt-plugin/config")?;
 
     let _logger_guard = TracingLogger::from_config(&config);
 
@@ -12,7 +12,7 @@ async fn main() -> Result<(), AppError> {
     let server = builder.build().await?;
 
     server.start().await?;
-    info!("Application started successfully");
+    info!("Server started successfully");
 
     signal::ctrl_c().await?;
     info!("Server shut down gracefully");
