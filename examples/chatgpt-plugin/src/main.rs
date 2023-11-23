@@ -15,7 +15,7 @@ async fn main() -> Result<(), AppError> {
     info!("Server started successfully");
 
     signal::ctrl_c().await?;
-    info!("Server shut down gracefully");
+    info!("Server shutdown gracefully");
 
     Ok(())
 }
