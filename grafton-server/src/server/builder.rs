@@ -8,7 +8,7 @@ use axum_server::tls_rustls::RustlsConfig;
 use time::Duration;
 use tracing::{debug, error};
 
-use crate::{model::AppContext, web::App, AppError, Config};
+use crate::{model::AppContext, util::Config, web::App, AppError};
 
 pub struct Server {
     router: axum_login::axum::Router,

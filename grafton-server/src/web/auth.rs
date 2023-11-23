@@ -159,7 +159,6 @@ impl AuthnBackend for Backend {
             let login_id;
             match creds.provider.as_str() {
                 "github" => {
-                    // Use access token to request user info.
                     let user_info = reqwest::Client::new()
                         .get("https://api.github.com/user")
                         .header(USER_AGENT, "axum-login") // See: https://docs.github.com/en/rest/overview/resources-in-the-rest-api?apiVersion=2022-11-28#user-agent-required
@@ -177,7 +176,6 @@ impl AuthnBackend for Backend {
                     login_id = user_info.login;
                 }
                 "google" => {
-                    // Use access token to request user info.
                     let user_info = reqwest::Client::new()
                         .get("https://www.googleapis.com/oauth2/v3/userinfo")
                         .header(
@@ -232,7 +230,4 @@ impl AuthnBackend for Backend {
     }
 }
 
-// We use a type alias for convenience.
-//
-// Note that we've supplied our concrete backend here.
 pub type AuthSession = axum_login::AuthSession<Backend>;

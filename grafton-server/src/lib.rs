@@ -10,4 +10,4 @@ mod rbac;
 pub use error::AppError;
 pub use server::ServerBuilder;
 pub use tracing;
-pub use util::{Config, TracingLogger};
+pub use util::{ClientConfig, Config, TracingLogger};

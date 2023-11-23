@@ -126,10 +126,8 @@ impl Website {
         match self.format_url(protocol, port) {
             Ok(url) => url,
             Err(err) => {
-                // Handle the error, log it, or return a default/fallback URL
-                // For example:
                 eprintln!("Error generating URL: {}", err);
-                String::new() // or a default/fallback URL
+                String::new()
             }
         }
     }
@@ -618,11 +616,9 @@ mod tests {
             public_ssl_enabled = true
         "#;
 
-        // Create a temporary directory
         let temp_dir = tempfile::tempdir().expect("Failed to create a temporary directory");
         let config_dir = temp_dir.path();
 
-        // Simulate loading and merging of TOML files
         let default_path = config_dir.join("default.toml");
         let local_path = config_dir.join("local.toml");
 
@@ -633,7 +629,6 @@ mod tests {
         let loaded_config_after_local_toml = Config::load_from_dir(config_dir.to_str().unwrap())
             .expect("Failed to load config after local.toml");
 
-        // Assertions to verify the loaded configuration
         assert_eq!(loaded_config_after_local_toml.run_mode, "dev");
         assert_eq!(loaded_config_after_local_toml.website.bind_ports.http, 8080);
         assert_eq!(loaded_config_after_local_toml.website.public_ports.http, 80);
@@ -647,7 +642,6 @@ mod tests {
             Verbosity::Debug
         );
 
-        // Check for existence of OAuth clients and then assert
         if let Some(google_client) = loaded_config_after_local_toml.oauth_clients.get("google") {
             assert_eq!(google_client.client_id.to_string(), "YOUR GOOGLE CLIENT ID");
             assert_eq!(
