@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use askama::Template;
 use axum_login::{
@@ -49,30 +49,35 @@ pub struct NextUrl {
 
 pub fn router() -> axum_login::axum::Router<Arc<AppContext>> {
     axum_login::axum::Router::new()
-        .route("/login", post(self::post::login))
-        .route("/login", get(self::get::login))
+        .route("/login/:provider", post(self::post::login))
+        .route("/login/:provider", get(self::get::login))
         .route("/logout", get(self::get::logout))
 }
 
 mod post {
+    use axum::extract::Path;
+
     use super::*;
 
     pub async fn login(
         auth_session: AuthSession,
         session: Session,
+        Path(provider): Path<String>,
         Form(NextUrl { next }): Form<NextUrl>,
     ) -> impl IntoResponse {
-        let (auth_url, csrf_state) = auth_session.backend.authorize_url();
+        match auth_session.backend.authorize_url(provider.clone()) {
+            Ok((url, token)) => {
+                session
+                    .insert(CSRF_STATE_KEY, token.secret())
+                    .expect("Serialization should not fail.");
+                session
+                    .insert(NEXT_URL_KEY, next)
+                    .expect("Serialization should not fail.");
 
-        session
-            .insert(CSRF_STATE_KEY, csrf_state.secret())
-            .expect("Serialization should not fail.");
-
-        session
-            .insert(NEXT_URL_KEY, next)
-            .expect("Serialization should not fail.");
-
-        Redirect::to(auth_url.as_str()).into_response()
+                Redirect::to(url.as_str()).into_response()
+            }
+            Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        }
     }
 }
 
@@ -88,7 +93,7 @@ mod get {
 
     pub async fn logout(mut auth_session: AuthSession) -> impl IntoResponse {
         match auth_session.logout() {
-            Ok(_) => Redirect::to("/login").into_response(),
+            Ok(_) => Redirect::to("/login/github").into_response(),
             Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
         }
     }
@@ -110,16 +115,21 @@ struct UserInfo {
 #[derive(Debug, Clone)]
 pub struct Backend {
     db: SqlitePool,
-    client: BasicClient,
+    oauth_clients: HashMap<String, BasicClient>,
 }
 
 impl Backend {
-    pub fn new(db: SqlitePool, client: BasicClient) -> Self {
-        Self { db, client }
+    pub fn new(db: SqlitePool, oauth_clients: HashMap<String, BasicClient>) -> Self {
+        Self { db, oauth_clients }
     }
 
-    pub fn authorize_url(&self) -> (Url, CsrfToken) {
-        self.client.authorize_url(CsrfToken::new_random).url()
+    pub fn authorize_url(&self, provider: String) -> Result<(Url, CsrfToken), AppError> {
+        if let Some(oauth_client) = self.oauth_clients.get(&provider) {
+            let csrf_token = CsrfToken::new_random();
+            Ok(oauth_client.authorize_url(|| csrf_token.clone()).url())
+        } else {
+            Err(AppError::ClientConfigNotFound(provider))
+        }
     }
 }
 
@@ -138,76 +148,79 @@ impl AuthnBackend for Backend {
             return Ok(None);
         };
 
-        // Process authorization code, expecting a token response back.
-        let token_res = self
-            .client
-            .exchange_code(AuthorizationCode::new(creds.code))
-            .request_async(async_http_client)
-            .await
-            .map_err(Self::Error::OAuth2)?;
+        if let Some(oauth_client) = self.oauth_clients.get(&creds.provider) {
+            // Use oauth_client for the token exchange
+            let token_res = oauth_client
+                .exchange_code(AuthorizationCode::new(creds.code))
+                .request_async(async_http_client)
+                .await
+                .map_err(Self::Error::OAuth2)?;
 
-        let login_id;
-        match creds.provider.as_str() {
-            "github" => {
-                // Use access token to request user info.
-                let user_info = reqwest::Client::new()
-                    .get("https://api.github.com/user")
-                    .header(USER_AGENT, "axum-login") // See: https://docs.github.com/en/rest/overview/resources-in-the-rest-api?apiVersion=2022-11-28#user-agent-required
-                    .header(
-                        AUTHORIZATION,
-                        format!("Bearer {}", token_res.access_token().secret()),
-                    )
-                    .send()
-                    .await
-                    .map_err(Self::Error::Reqwest)?
-                    .json::<UserInfo>()
-                    .await
-                    .map_err(Self::Error::Reqwest)?;
+            let login_id;
+            match creds.provider.as_str() {
+                "github" => {
+                    // Use access token to request user info.
+                    let user_info = reqwest::Client::new()
+                        .get("https://api.github.com/user")
+                        .header(USER_AGENT, "axum-login") // See: https://docs.github.com/en/rest/overview/resources-in-the-rest-api?apiVersion=2022-11-28#user-agent-required
+                        .header(
+                            AUTHORIZATION,
+                            format!("Bearer {}", token_res.access_token().secret()),
+                        )
+                        .send()
+                        .await
+                        .map_err(Self::Error::Reqwest)?
+                        .json::<UserInfo>()
+                        .await
+                        .map_err(Self::Error::Reqwest)?;
 
-                login_id = user_info.login;
+                    login_id = user_info.login;
+                }
+                "google" => {
+                    // Use access token to request user info.
+                    let user_info = reqwest::Client::new()
+                        .get("https://www.googleapis.com/oauth2/v3/userinfo")
+                        .header(
+                            AUTHORIZATION,
+                            format!("Bearer {}", token_res.access_token().secret()),
+                        )
+                        .send()
+                        .await
+                        .map_err(Self::Error::Reqwest)?
+                        .json::<UserInfo>()
+                        .await
+                        .map_err(Self::Error::Reqwest)?;
+
+                    login_id = user_info.login;
+                }
+                _ => {
+                    return Err(AppError::OAuth2(BasicRequestTokenError::Other(format!(
+                        "Unsupported provider `{}`.",
+                        creds.provider
+                    ))))
+                }
             }
-            "google" => {
-                // Use access token to request user info.
-                let user_info = reqwest::Client::new()
-                    .get("https://www.googleapis.com/oauth2/v3/userinfo")
-                    .header(
-                        AUTHORIZATION,
-                        format!("Bearer {}", token_res.access_token().secret()),
-                    )
-                    .send()
-                    .await
-                    .map_err(Self::Error::Reqwest)?
-                    .json::<UserInfo>()
-                    .await
-                    .map_err(Self::Error::Reqwest)?;
 
-                login_id = user_info.login;
-            }
-            _ => {
-                return Err(AppError::OAuth2(BasicRequestTokenError::Other(format!(
-                    "Unsupported provider `{}`.",
-                    creds.provider
-                ))))
-            }
-        }
-
-        // Persist user in our database so we can use `get_user`.
-        let user = sqlx::query_as(
-            r#"
+            // Persist user in our database so we can use `get_user`.
+            let user = sqlx::query_as(
+                r#"
             insert into users (username, access_token)
             values (?, ?)
             on conflict(username) do update
             set access_token = excluded.access_token
             returning *
             "#,
-        )
-        .bind(login_id)
-        .bind(token_res.access_token().secret())
-        .fetch_one(&self.db)
-        .await
-        .map_err(Self::Error::Sqlx)?;
+            )
+            .bind(login_id)
+            .bind(token_res.access_token().secret())
+            .fetch_one(&self.db)
+            .await
+            .map_err(Self::Error::Sqlx)?;
 
-        Ok(Some(user))
+            Ok(Some(user))
+        } else {
+            return Err(AppError::ClientConfigNotFound(creds.provider));
+        }
     }
 
     async fn get_user(&self, user_id: &UserId<Self>) -> Result<Option<Self::User>, Self::Error> {

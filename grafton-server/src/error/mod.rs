@@ -7,8 +7,10 @@ use {
 };
 
 use oauth2::{basic::BasicRequestTokenError, reqwest::AsyncHttpClientError};
+use sqlx::migrate::MigrateError;
 #[cfg(feature = "grpc")]
 use tonic::{transport::Error as TonicTransportError, Status};
+use url::ParseError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum AppError {
@@ -33,6 +35,31 @@ pub enum AppError {
     Reqwest(reqwest::Error),
     #[error(transparent)]
     OAuth2(BasicRequestTokenError<AsyncHttpClientError>),
+    UrlFormatError {
+        protocol: String,
+        hostname: String,
+        port: u16,
+        inner: ParseError,
+        cause: String,
+    },
+    InvalidAuthUrlDetailed {
+        client_name: String,
+        url: String,
+        inner: ParseError,
+    },
+    InvalidTokenUrlDetailed {
+        client_name: String,
+        url: String,
+        inner: ParseError,
+    },
+    DatabaseConnectionErrorDetailed {
+        conn_str: String,
+        inner: sqlx::Error,
+    },
+    DatabaseMigrationErrorDetailed {
+        migration_details: String,
+        inner: MigrateError,
+    },
 }
 
 impl From<anyhow::Error> for AppError {
@@ -66,6 +93,58 @@ impl fmt::Display for AppError {
             AppError::Sqlx(err) => write!(f, "SQLx error: {}", err),
             AppError::Reqwest(err) => write!(f, "Reqwest error: {}", err),
             AppError::OAuth2(err) => write!(f, "OAuth2 error: {}", err),
+            AppError::UrlFormatError {
+                protocol,
+                hostname,
+                port,
+                inner,
+                cause,
+            } => {
+                write!(
+                    f,
+                    "Error formatting URL with protocol '{}', hostname '{}', port {}, cause {}, inner {}", 
+                    protocol, hostname, port, cause, inner
+                )
+            }
+            AppError::InvalidAuthUrlDetailed {
+                url,
+                inner,
+                client_name,
+            } => {
+                write!(
+                    f,
+                    "Invalid authentication URL for client {} '{}': {}",
+                    client_name, url, inner
+                )
+            }
+            AppError::InvalidTokenUrlDetailed {
+                url,
+                inner,
+                client_name,
+            } => {
+                write!(
+                    f,
+                    "Invalid token URL for {} '{}': {}",
+                    client_name, url, inner
+                )
+            }
+            AppError::DatabaseConnectionErrorDetailed { conn_str, inner } => {
+                write!(
+                    f,
+                    "Database connection error with '{}': {}",
+                    conn_str, inner
+                )
+            }
+            AppError::DatabaseMigrationErrorDetailed {
+                migration_details,
+                inner,
+            } => {
+                write!(
+                    f,
+                    "Database migration error during '{}': {}",
+                    migration_details, inner
+                )
+            }
         }
     }
 }
@@ -122,6 +201,32 @@ impl From<AppError> for Status {
             AppError::Sqlx(err) => Status::internal(format!("SQLx error: {}", err)),
             AppError::Reqwest(err) => Status::internal(format!("Reqwest error: {}", err)),
             AppError::OAuth2(err) => Status::internal(format!("OAuth2 error: {}", err)),
+            AppError::UrlFormatError {
+                protocol,
+                hostname,
+                port,
+                inner,
+                cause,
+            } => Status::internal(format!(
+                "Error formatting URL with protocol '{}', hostname '{}', port {}, inner {}, cause {}",
+                protocol, hostname, port, inner, cause
+            )),
+            AppError::InvalidAuthUrlDetailed { url, inner, client_name } => {
+                Status::internal(format!("Invalid authentication URL for {} '{}': {}",  client_name, url, inner))
+            }
+            AppError::InvalidTokenUrlDetailed { url, inner, client_name } => {
+                Status::internal(format!("Invalid token URL for {} '{}': {}", client_name, url, inner))
+            }
+            AppError::DatabaseConnectionErrorDetailed { conn_str, inner } => Status::internal(
+                format!("Database connection error with '{}': {}", conn_str, inner),
+            ),
+            AppError::DatabaseMigrationErrorDetailed {
+                migration_details,
+                inner,
+            } => Status::internal(format!(
+                "Database migration error during '{}': {}",
+                migration_details, inner
+            )),
         }
     }
 }

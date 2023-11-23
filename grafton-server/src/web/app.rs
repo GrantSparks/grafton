@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use askama_axum::IntoResponse;
 use axum::{middleware::Next, response::Redirect};
@@ -11,6 +11,7 @@ use axum_login::{
 use oauth2::{basic::BasicClient, AuthUrl, TokenUrl};
 use sqlx::SqlitePool;
 use tower::ServiceBuilder;
+use tracing::debug;
 
 use super::auth::{AuthSession, Backend};
 use crate::{
@@ -21,7 +22,7 @@ use crate::{
 
 pub struct App {
     db: SqlitePool,
-    client: BasicClient,
+    oauth_clients: HashMap<String, BasicClient>,
     session_layer: SessionManagerLayer<MemoryStore>,
     login_url: String,
 }
@@ -31,34 +32,51 @@ impl App {
         app_ctx: Arc<AppContext>,
         session_layer: SessionManagerLayer<MemoryStore>,
     ) -> Result<Self, AppError> {
-        let github_client = app_ctx
-            .config
-            .oauth_clients
-            .get("github")
-            .ok_or(AppError::ClientConfigNotFound("github".to_string()))?;
+        let mut oauth_clients = HashMap::new();
 
-        let client_id = github_client.client_id.clone();
-        let client_secret = github_client.client_secret.clone();
+        for (client_name, client_config) in app_ctx.config.oauth_clients.iter() {
+            debug!("Configuring oauth client: {}", client_name);
+            let client_id = client_config.client_id.clone();
+            let client_secret = client_config.client_secret.clone();
 
-        let auth_url = AuthUrl::new(github_client.auth_uri.clone())
-            .map_err(|e| AppError::InvalidAuthUrl(e.to_string()))?;
-        let token_url = TokenUrl::new(github_client.token_uri.clone())
-            .map_err(|e| AppError::InvalidTokenUrl(e.to_string()))?;
+            let auth_url = AuthUrl::new(client_config.auth_uri.clone()).map_err(|e| {
+                AppError::InvalidAuthUrlDetailed {
+                    url: client_config.auth_uri.clone(),
+                    inner: e,
+                    client_name: client_name.clone(),
+                }
+            })?;
+            let token_url = TokenUrl::new(client_config.token_uri.clone()).map_err(|e| {
+                AppError::InvalidTokenUrlDetailed {
+                    url: client_config.token_uri.clone(),
+                    inner: e,
+                    client_name: client_name.clone(),
+                }
+            })?;
 
-        let client = BasicClient::new(client_id, Some(client_secret), auth_url, Some(token_url));
+            let client =
+                BasicClient::new(client_id, Some(client_secret), auth_url, Some(token_url));
+            oauth_clients.insert(client_name.clone(), client);
+        }
 
-        let db = SqlitePool::connect(":memory:")
-            .await
-            .map_err(|e| AppError::DatabaseConnectionError(e.to_string()))?;
+        let db = SqlitePool::connect(":memory:").await.map_err(|e| {
+            AppError::DatabaseConnectionErrorDetailed {
+                conn_str: ":memory:".to_string(),
+                inner: e,
+            }
+        })?;
 
         sqlx::migrate!()
             .run(&db)
             .await
-            .map_err(|e| AppError::DatabaseMigrationError(e.to_string()))?;
+            .map_err(|e| AppError::DatabaseMigrationErrorDetailed {
+                migration_details: "Initial migration".to_string(),
+                inner: e,
+            })?;
 
         Ok(Self {
             db,
-            client,
+            oauth_clients,
             session_layer,
             login_url: app_ctx
                 .config
@@ -75,7 +93,7 @@ impl App {
         //
         // This combines the session layer with our backend to establish the auth
         // service which will provide the auth session as a request extension.
-        let backend = Backend::new(self.db.clone(), self.client.clone());
+        let backend = Backend::new(self.db.clone(), self.oauth_clients.clone());
         let auth_service = ServiceBuilder::new()
             .layer(HandleErrorLayer::new(|_: BoxError| async {
                 StatusCode::BAD_REQUEST

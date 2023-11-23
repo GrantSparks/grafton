@@ -56,7 +56,7 @@ pub struct Pages {
     pub public_home: String,
     #[derivative(Default(value = "\"error\".into()"))]
     pub public_error: String,
-    #[derivative(Default(value = "\"login\".into()"))]
+    #[derivative(Default(value = "\"login/github\".into()"))]
     pub public_login: String,
 }
 
@@ -166,11 +166,23 @@ impl Website {
 
     fn format_url(&self, protocol: &str, port: u16) -> Result<String, AppError> {
         let base = format!("{}://{}", protocol, self.public_hostname);
-        let mut url = Url::parse(&base).map_err(|e| AppError::InvalidAuthUrl(e.to_string()))?;
+        let mut url = Url::parse(&base).map_err(|e| AppError::UrlFormatError {
+            protocol: protocol.to_string(),
+            hostname: self.public_hostname.clone(),
+            port,
+            inner: e,
+            cause: "Invalid URL".to_string(),
+        })?;
 
         if !Self::is_default_port(protocol, port) {
             url.set_port(Some(port))
-                .map_err(|_| AppError::InvalidAuthUrl("Invalid port".to_string()))?;
+                .map_err(|_| AppError::UrlFormatError {
+                    protocol: protocol.to_string(),
+                    hostname: self.public_hostname.clone(),
+                    port,
+                    cause: "Invalid port".to_string(),
+                    inner: url::ParseError::InvalidPort,
+                })?;
         }
 
         Ok(url.to_string().trim_end_matches('/').to_string())
