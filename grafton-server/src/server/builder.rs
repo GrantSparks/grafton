@@ -35,12 +35,12 @@ impl Server {
             )
             .await?;
 
-            match start_https_server(https_addr, make_web_service, ssl_config).await {
+            match start_https_server(https_addr, make_web_service, ssl_config) {
                 Ok(_) => debug!("grafton server started https"),
                 Err(e) => error!("Failed to start grafton server: {}", e),
             }
         } else {
-            match start_http_server(http_addr, make_web_service).await {
+            match start_http_server(http_addr, make_web_service) {
                 Ok(_) => debug!("grafton server started http"),
                 Err(e) => error!("Failed to start grafton server: {}", e),
             }
@@ -82,7 +82,7 @@ impl ServerBuilder {
             }
         };
 
-        let inner_router = app.create_auth_router().await;
+        let inner_router = app.create_auth_router();
 
         Ok(Self {
             app_ctx: context,
@@ -90,7 +90,7 @@ impl ServerBuilder {
         })
     }
 
-    pub async fn build(self) -> Result<Server, AppError> {
+    pub fn build(self) -> Result<Server, AppError> {
         let config = self.app_ctx.config.clone();
         let router = self.inner_router.with_state(self.app_ctx);
 
@@ -106,7 +106,7 @@ fn create_session_layer() -> SessionManagerLayer<MemoryStore> {
         .with_expiry(Expiry::OnInactivity(Duration::days(1)))
 }
 
-async fn start_https_server(
+fn start_https_server(
     https_addr: SocketAddr,
     web_service: IntoMakeService<axum_login::axum::Router>,
     config: RustlsConfig,
@@ -122,7 +122,7 @@ async fn start_https_server(
     Ok(())
 }
 
-async fn start_http_server(
+fn start_http_server(
     http_addr: SocketAddr,
     web_service: IntoMakeService<axum_login::axum::Router>,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {

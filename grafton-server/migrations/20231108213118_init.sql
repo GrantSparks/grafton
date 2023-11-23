@@ -2,5 +2,6 @@
 create table if not exists users (
     id integer primary key autoincrement,
     username text not null unique,
-    access_token text not null
+    access_token text not null,
+    role TEXT NOT NULL DEFAULT 'None'
 );
