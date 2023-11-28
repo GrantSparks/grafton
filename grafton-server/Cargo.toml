@@ -24,7 +24,7 @@ version = "0.1.0"
 opt-level = 3
 
 [features]
-default = ["grpc", "rbac", "graphql"]
+default = ["rbac", "graphql"]
 graphql = []
 grpc = ["tonic"]
 rbac = ["oso"]
