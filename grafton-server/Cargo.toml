@@ -47,7 +47,7 @@ tracing = "*"
 tracing-appender = "*"
 tracing-subscriber = "*"
 url = "*"
-askama_axum = "*"
+askama_axum = "0.3"
 derivative = "*"
 
 [dependencies.axum-server]
@@ -55,7 +55,7 @@ features = ["tls-rustls"]
 version = "*"
 
 [dependencies.axum-login]
-version = "*"
+version = "0.9"
 
 [dependencies.reqwest]
 features = ["json"]
@@ -67,6 +67,7 @@ version = "*"
 
 [dependencies.axum]
 features = ["macros"] # Hack to enable macros in axum-login crate dependency
+version = "0.6"
 
 [dependencies.figment]
 features = ["env", "toml"]
