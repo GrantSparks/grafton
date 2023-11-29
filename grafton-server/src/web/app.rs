@@ -11,7 +11,7 @@ use {
     oauth2::{basic::BasicClient, AuthUrl, TokenUrl},
     sqlx::SqlitePool,
     tower::ServiceBuilder,
-    tracing::debug,
+    tracing::{debug, error, info, warn},
 };
 
 use super::auth::{AuthSession, Backend};
@@ -58,22 +58,27 @@ impl App {
             let client =
                 BasicClient::new(client_id, Some(client_secret), auth_url, Some(token_url));
             oauth_clients.insert(client_name.clone(), client);
+            debug!("OAuth client configured: {}", client_name);
         }
 
         let db = SqlitePool::connect(":memory:").await.map_err(|e| {
+            error!("Database connection error: {}", e);
             AppError::DatabaseConnectionErrorDetailed {
                 conn_str: ":memory:".to_string(),
                 inner: e,
             }
         })?;
 
-        sqlx::migrate!()
-            .run(&db)
-            .await
-            .map_err(|e| AppError::DatabaseMigrationErrorDetailed {
+        debug!("Running database migrations");
+        sqlx::migrate!().run(&db).await.map_err(|e| {
+            error!("Database migration error: {}", e);
+            AppError::DatabaseMigrationErrorDetailed {
                 migration_details: "Initial migration".to_string(),
                 inner: e,
-            })?;
+            }
+        })?;
+
+        info!("App successfully initialized");
 
         Ok(Self {
             db,
@@ -90,6 +95,7 @@ impl App {
     }
 
     pub fn create_auth_router(self) -> axum_login::axum::Router<Arc<AppContext>> {
+        debug!("Creating auth router");
         // Auth service.
         //
         // This combines the session layer with our backend to establish the auth
@@ -108,6 +114,7 @@ impl App {
                 if auth_session.user.is_some() {
                     next.run(req).await
                 } else {
+                    warn!("Unauthorized access attempt, redirecting to login");
                     let uri = req.uri().to_string();
                     let next = urlencoding::encode(&uri);
                     let redirect_url = format!("{}?next={}", login_url_clone, next);
@@ -115,6 +122,7 @@ impl App {
                 }
             }
         });
+        info!("Auth middleware created");
 
         protected::router()
             .route_layer(auth_middleware)

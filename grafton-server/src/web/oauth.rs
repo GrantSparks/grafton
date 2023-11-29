@@ -12,6 +12,7 @@ use {
     },
     oauth2::CsrfToken,
     serde::Deserialize,
+    tracing::{debug, error, warn},
 };
 
 use crate::{
@@ -46,7 +47,10 @@ mod get {
             state: new_state,
         }): Query<AuthzResp>,
     ) -> impl IntoResponse {
+        debug!("OAuth callback for provider: {}", provider);
+
         let Ok(Some(old_state)) = session.get(CSRF_STATE_KEY) else {
+            warn!("CSRF state missing or invalid");
             return StatusCode::BAD_REQUEST.into_response();
         };
 
@@ -58,8 +62,12 @@ mod get {
         };
 
         let user = match auth_session.authenticate(creds).await {
-            Ok(Some(user)) => user,
+            Ok(Some(user)) => {
+                debug!("User authenticated successfully");
+                user
+            }
             Ok(None) => {
+                warn!("Invalid CSRF state, authentication failed");
                 return (
                     StatusCode::UNAUTHORIZED,
                     LoginTemplate {
@@ -67,18 +75,24 @@ mod get {
                         next: None,
                     },
                 )
-                    .into_response()
+                    .into_response();
             }
-            Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+            Err(e) => {
+                error!("Internal error during authentication: {:?}", e);
+                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            }
         };
 
         if auth_session.login(&user).await.is_err() {
+            error!("Error logging in the user");
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
 
         if let Ok(Some(next)) = session.remove::<String>(NEXT_URL_KEY) {
+            debug!("Redirecting to next URL: {}", next);
             Redirect::to(&next).into_response()
         } else {
+            debug!("Redirecting to home page");
             Redirect::to("/").into_response()
         }
     }
