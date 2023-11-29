@@ -35,12 +35,6 @@ pub struct Server {
 
 impl Server {
     pub async fn start(self) -> Result<(), AppError> {
-        let http_addr = (
-            self.config.website.bind_address,
-            self.config.website.bind_ports.http,
-        )
-            .into();
-
         if self.config.website.bind_ssl_config.enabled {
             let https_addr = (
                 self.config.website.bind_address,
@@ -49,16 +43,23 @@ impl Server {
                 .into();
 
             let tls_acceptor = create_tls_acceptor(&self.config.website.bind_ssl_config)?;
-            let https_router = self.router.clone();
 
+            let https_router = self.router.clone();
             tokio::spawn(async move {
                 if let Err(e) = serve_https(https_addr, https_router, tls_acceptor).await {
                     error!("Failed to start HTTPS server: {}", e);
                 }
             });
         } else {
+            let http_addr = (
+                self.config.website.bind_address,
+                self.config.website.bind_ports.http,
+            )
+                .into();
+
+            let http_router = self.router.clone();
             tokio::spawn(async move {
-                if let Err(e) = serve_http(http_addr, self.router.clone()).await {
+                if let Err(e) = serve_http(http_addr, http_router).await {
                     error!("Failed to start HTTP server: {}", e);
                 }
             });
