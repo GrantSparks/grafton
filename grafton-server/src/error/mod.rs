@@ -107,17 +107,23 @@ pub enum AppError {
 
     #[error("Invalid HTTP header value: {0}")]
     InvalidHttpHeaderValue(#[from] reqwest::header::InvalidHeaderValue),
+
+    #[error("TLS configuration error: {0}")]
+    TlsConfigError(#[from] RustlsError),
+
+    #[error("Invalid certificate")]
+    InvalidCertificate,
+
+    #[error("No private keys found in key file '{file_path}': {error}")]
+    NoPrivateKey { file_path: String, error: String },
+
+    #[error("Invalid private key in file '{file_path}': {error}")]
+    InvalidPrivateKey { file_path: String, error: String },
 }
 
 #[cfg(feature = "rbac")]
 impl From<PoisonError<MutexGuard<'_, Oso>>> for AppError {
     fn from(err: PoisonError<MutexGuard<'_, Oso>>) -> Self {
         AppError::MutexLockError(format!("Failed to acquire mutex lock: {}", err))
-    }
-}
-
-impl From<RustlsError> for AppError {
-    fn from(err: RustlsError) -> Self {
-        AppError::GenericError(err.to_string())
     }
 }

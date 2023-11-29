@@ -14,9 +14,8 @@ use {
     rustls::{Certificate, PrivateKey, ServerConfig},
     rustls_pemfile as pemfile,
     time::Duration,
-    tls_listener::TlsListener,
+    tls_listener::{rustls::TlsAcceptor, TlsListener},
     tokio::net::TcpListener,
-    tokio_rustls::TlsAcceptor,
     tower::ServiceExt,
     tracing::{debug, error, warn},
 };
@@ -75,32 +74,53 @@ impl Server {
 fn create_tls_acceptor(ssl_config: &SslConfig) -> Result<TlsAcceptor, AppError> {
     debug!("Creating TLS Acceptor with SSL Config: {:?}", ssl_config);
 
-    let cert_file = fs::File::open(&ssl_config.cert_path)?;
+    let cert_file = match fs::File::open(&ssl_config.cert_path) {
+        Ok(file) => file,
+        Err(e) => {
+            error!("Failed to open certificate file: {:?}", e);
+            return Err(AppError::IoError(e));
+        }
+    };
     let mut cert_reader = BufReader::new(cert_file);
-    let cert_chain = pemfile::certs(&mut cert_reader)?
-        .into_iter()
-        .map(Certificate)
-        .collect::<Vec<_>>();
+
+    let cert_chain = match pemfile::certs(&mut cert_reader) {
+        Ok(certs) => certs.into_iter().map(Certificate).collect::<Vec<_>>(),
+        Err(_) => {
+            error!("Failed to read certificates from PEM file");
+            return Err(AppError::InvalidCertificate);
+        }
+    };
 
     let key_file = fs::File::open(&ssl_config.key_path)?;
     let mut key_reader = BufReader::new(key_file);
-    let keys = pemfile::pkcs8_private_keys(&mut key_reader)?
-        .into_iter()
-        .map(PrivateKey)
-        .collect::<Vec<_>>();
 
-    if keys.is_empty() {
-        return Err(AppError::ConfigError(
-            "No private keys found in key file".to_string(),
-        ));
+    let ec_keys = rustls_pemfile::ec_private_keys(&mut key_reader).map_err(|e| {
+        AppError::InvalidPrivateKey {
+            file_path: ssl_config.key_path.clone(),
+            error: e.to_string(),
+        }
+    })?;
+
+    if ec_keys.is_empty() {
+        error!(
+            "No EC private keys found in key file: {}",
+            ssl_config.key_path
+        );
+        return Err(AppError::NoPrivateKey {
+            file_path: ssl_config.key_path.clone(),
+            error: "The file does not contain valid SEC1 EC private keys or is empty.".to_string(),
+        });
     }
+
+    let private_key = PrivateKey(ec_keys[0].clone());
 
     let config = ServerConfig::builder()
         .with_safe_defaults()
-        .with_no_client_auth() // GMS: TODO: verify correct setting for axum-login
-        .with_single_cert(cert_chain, keys[0].clone())?;
+        .with_no_client_auth() // TODO: verify setting for axum-login
+        .with_single_cert(cert_chain, private_key)?;
 
-    let acceptor = TlsAcceptor::from(Arc::new(config));
+    let acceptor: TlsAcceptor = Arc::new(config).into();
+
     debug!("TLS Acceptor created successfully");
     Ok(acceptor)
 }
