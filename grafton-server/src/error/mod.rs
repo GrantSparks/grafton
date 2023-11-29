@@ -1,6 +1,7 @@
 use oauth2::{basic::BasicRequestTokenError, reqwest::AsyncHttpClientError};
 #[cfg(feature = "rbac")]
 use oso::{Oso, OsoError};
+use rustls::Error as RustlsError;
 use sqlx::migrate::MigrateError;
 use std::io;
 use std::sync::MutexGuard;
@@ -12,6 +13,9 @@ use url::ParseError;
 
 #[derive(Debug, Error)]
 pub enum AppError {
+    #[error("Generic error: {0}")]
+    GenericError(String),
+
     #[error("General error: {0}")]
     GeneralError(#[from] anyhow::Error),
 
@@ -97,11 +101,20 @@ pub enum AppError {
         migration_details: String,
         inner: MigrateError,
     },
+
+    #[error("Invalid HTTP header value: {0}")]
+    InvalidHttpHeaderValue(#[from] reqwest::header::InvalidHeaderValue),
 }
 
 #[cfg(feature = "rbac")]
 impl From<PoisonError<MutexGuard<'_, Oso>>> for AppError {
     fn from(err: PoisonError<MutexGuard<'_, Oso>>) -> Self {
         AppError::MutexLockError(format!("Failed to acquire mutex lock: {}", err))
+    }
+}
+
+impl From<RustlsError> for AppError {
+    fn from(err: RustlsError) -> Self {
+        AppError::GenericError(err.to_string())
     }
 }

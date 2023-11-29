@@ -30,36 +30,27 @@ grpc = ["tonic"]
 rbac = ["oso"]
 
 [dev-dependencies]
-tempfile = "*"
+tempfile = "3"
 toml = "*"
 fs = "*"
 
 [dependencies]
-anyhow = "*"
-lazy_static = "*"
-oauth2 = "*"
-regex = "*"
-serde_json = "*"
-thiserror = "*"
+rustls-pemfile = "1"
+anyhow = "1"
+lazy_static = "1"
+oauth2 = "4"
+regex = "1"
+rustls = "*"
+serde_json = "1"
+thiserror = "1"
 time = "*"
-tower = "*"
+tokio-rustls = "*"
 tracing = "*"
 tracing-appender = "*"
 tracing-subscriber = "*"
-url = "*"
+url = "2"
 askama_axum = "*"
-derivative = "*"
-
-[dependencies.axum-server]
-features = ["tls-rustls"]
-version = "*"
-
-[dependencies.axum-login]
-version = "*"
-
-[dependencies.reqwest]
-features = ["json"]
-version = "*"
+derivative = "2"
 
 [dependencies.askama]
 features = ["with-axum"]
@@ -68,9 +59,24 @@ version = "*"
 [dependencies.axum]
 features = ["macros"] # Hack to enable macros in axum-login crate dependency
 
+[dependencies.axum-login]
+version = "*"
+
+[dependencies.reqwest]
+features = ["json"]
+version = "*"
+
 [dependencies.figment]
 features = ["env", "toml"]
 version = "*"
+
+[dependencies.hyper]
+features = ["http1", "http2", "server"]
+version = "1"
+
+[dependencies.hyper-util]
+version = "*"
+features = ["tokio", "server-auto"]
 
 [dependencies.oso]
 features = ["uuid-10"]
@@ -79,7 +85,7 @@ version = "*"
 
 [dependencies.serde]
 features = ["derive"]
-version = "*"
+version = "1"
 
 [dependencies.sqlx]
 features = ["sqlite", "time", "runtime-tokio"]
@@ -89,11 +95,19 @@ version = "*"
 features = ["derive"]
 version = "*"
 
+[dependencies.tls-listener]
+features = ["rustls", "hyper-h1", "hyper-h2"]
+version = "*"
+
 [dependencies.tokio]
 features = ["signal", "rt-multi-thread"]
-version = "*"
+version = "1"
 
 [dependencies.tonic]
 features = ["transport", "tls"]
 optional = true
+version = "*"
+
+[dependencies.tower]
+features = ["util"]
 version = "*"

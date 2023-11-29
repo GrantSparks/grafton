@@ -1,10 +1,8 @@
 use std::sync::Arc;
 
 use askama::Template;
-use axum_login::{
-    axum,
-    axum::{debug_handler, extract::State, response::IntoResponse, routing::get, Router},
-    http::StatusCode,
+use axum_login::axum::{
+    debug_handler, extract::State, http::StatusCode, response::IntoResponse, routing::get, Router,
 };
 
 use crate::{model::AppContext, web::auth::AuthSession};
