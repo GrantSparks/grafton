@@ -5,6 +5,8 @@ use {
     strum::{Display, EnumString, EnumVariantNames},
 };
 
+use crate::new_secret_type;
+
 use super::Identifiable;
 
 #[cfg(feature = "rbac")]
@@ -35,6 +37,13 @@ pub enum Role {
     Admin,
 }
 
+new_secret_type![
+    /// AccessToken wraps the token to prevent accidental leakage.
+    #[derive(Default, Clone, Serialize, Deserialize, Eq, PartialEq, Hash, sqlx::Type)]
+    #[sqlx(transparent)]
+    AccessToken(String)
+];
+
 #[cfg(feature = "rbac")]
 impl PolarClass for Role {}
 
@@ -47,7 +56,7 @@ pub struct User {
     pub username: String,
     #[polar(attribute)]
     pub role: Role,
-    pub access_token: String,
+    pub access_token: AccessToken,
 }
 
 #[cfg(not(feature = "rbac"))]
@@ -62,7 +71,7 @@ impl AuthUser for User {
     type Id = i64;
 
     fn session_auth_hash(&self) -> &[u8] {
-        self.access_token.as_bytes()
+        self.access_token.secret().as_bytes()
     }
 
     fn id(&self) -> Self::Id {
