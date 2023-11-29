@@ -7,7 +7,9 @@ mod web;
 #[cfg(feature = "rbac")]
 mod rbac;
 
-pub use error::AppError;
-pub use server::ServerBuilder;
-pub use tracing;
-pub use util::{ClientConfig, Config, TracingLogger};
+pub use {
+    error::AppError,
+    server::ServerBuilder,
+    tracing,
+    util::{ClientConfig, Config, TracingLogger},
+};

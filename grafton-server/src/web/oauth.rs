@@ -1,16 +1,18 @@
 use std::sync::Arc;
 
-use axum_login::{
-    axum::{
-        extract::{Path, Query},
-        http::StatusCode,
-        response::{IntoResponse, Redirect},
-        routing::get,
+use {
+    axum_login::{
+        axum::{
+            extract::{Path, Query},
+            http::StatusCode,
+            response::{IntoResponse, Redirect},
+            routing::get,
+        },
+        tower_sessions::Session,
     },
-    tower_sessions::Session,
+    oauth2::CsrfToken,
+    serde::Deserialize,
 };
-use oauth2::CsrfToken;
-use serde::Deserialize;
 
 use crate::{
     model::AppContext,

@@ -1,7 +1,9 @@
-use axum_login::AuthUser;
-use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
-use strum::{Display, EnumString, EnumVariantNames};
+use {
+    axum_login::AuthUser,
+    serde::{Deserialize, Serialize},
+    sqlx::FromRow,
+    strum::{Display, EnumString, EnumVariantNames},
+};
 
 use super::Identifiable;
 

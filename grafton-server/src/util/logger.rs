@@ -1,6 +1,8 @@
-use tracing::{debug, error, info, subscriber::set_global_default, trace, warn, Level};
-use tracing_appender::non_blocking::WorkerGuard;
-use tracing_subscriber::fmt::format::FmtSpan;
+use {
+    tracing::{debug, error, info, subscriber::set_global_default, trace, warn, Level},
+    tracing_appender::non_blocking::WorkerGuard,
+    tracing_subscriber::fmt::format::FmtSpan,
+};
 
 use super::config::{Config, Verbosity};
 

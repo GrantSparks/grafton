@@ -1,16 +1,18 @@
 use std::{collections::HashMap, sync::Arc};
 
-use askama_axum::IntoResponse;
-use axum::{middleware::Next, response::Redirect};
-use axum_login::{
-    axum::{error_handling::HandleErrorLayer, http::StatusCode, middleware::from_fn, BoxError},
-    tower_sessions::{MemoryStore, SessionManagerLayer},
-    urlencoding, AuthManagerLayerBuilder,
+use {
+    askama_axum::IntoResponse,
+    axum::{middleware::Next, response::Redirect},
+    axum_login::{
+        axum::{error_handling::HandleErrorLayer, http::StatusCode, middleware::from_fn, BoxError},
+        tower_sessions::{MemoryStore, SessionManagerLayer},
+        urlencoding, AuthManagerLayerBuilder,
+    },
+    oauth2::{basic::BasicClient, AuthUrl, TokenUrl},
+    sqlx::SqlitePool,
+    tower::ServiceBuilder,
+    tracing::debug,
 };
-use oauth2::{basic::BasicClient, AuthUrl, TokenUrl};
-use sqlx::SqlitePool;
-use tower::ServiceBuilder;
-use tracing::debug;
 
 use super::auth::{AuthSession, Backend};
 use crate::{

@@ -5,17 +5,19 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use anyhow::Result;
-use derivative::Derivative;
-use figment::{
-    providers::{Format, Toml},
-    Figment,
+use {
+    anyhow::Result,
+    derivative::Derivative,
+    figment::{
+        providers::{Format, Toml},
+        Figment,
+    },
+    oauth2::{ClientId, ClientSecret},
+    serde::{Deserialize, Serialize},
+    serde_json::{Map, Value},
+    strum::{Display, EnumString, EnumVariantNames},
+    url::Url,
 };
-use oauth2::{ClientId, ClientSecret};
-use serde::{Deserialize, Serialize};
-use serde_json::{Map, Value};
-use strum::{Display, EnumString, EnumVariantNames};
-use url::Url;
 
 use crate::{util::token_expander::expand_tokens, AppError};
 

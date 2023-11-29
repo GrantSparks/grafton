@@ -1,7 +1,9 @@
-use lazy_static::lazy_static;
-use regex::{Captures, Regex};
-use serde_json::Value;
-use tracing::{debug, error, warn};
+use {
+    lazy_static::lazy_static,
+    regex::{Captures, Regex},
+    serde_json::Value,
+    tracing::{debug, error, warn},
+};
 
 const TOKEN_RESOLVE_DEPTH_LIMIT: usize = 10;
 

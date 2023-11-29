@@ -1,27 +1,29 @@
 use std::{collections::HashMap, sync::Arc};
 
-use askama::Template;
-use axum_login::{
-    axum::{
-        async_trait,
-        extract::Query,
-        http::StatusCode,
-        response::{IntoResponse, Redirect},
-        routing::{get, post},
-        Form,
+use {
+    askama::Template,
+    axum_login::{
+        axum::{
+            async_trait,
+            extract::Query,
+            http::StatusCode,
+            response::{IntoResponse, Redirect},
+            routing::{get, post},
+            Form,
+        },
+        tower_sessions::Session,
+        AuthnBackend, UserId,
     },
-    tower_sessions::Session,
-    AuthnBackend, UserId,
+    oauth2::{
+        basic::{BasicClient, BasicRequestTokenError},
+        reqwest::async_http_client,
+        url::Url,
+        AuthorizationCode, CsrfToken, TokenResponse,
+    },
+    reqwest::header::{HeaderName as ReqwestHeaderName, HeaderValue},
+    serde::Deserialize,
+    sqlx::SqlitePool,
 };
-use oauth2::{
-    basic::{BasicClient, BasicRequestTokenError},
-    reqwest::async_http_client,
-    url::Url,
-    AuthorizationCode, CsrfToken, TokenResponse,
-};
-use reqwest::header::{HeaderName as ReqwestHeaderName, HeaderValue};
-use serde::Deserialize;
-use sqlx::SqlitePool;
 
 use crate::{
     model::{AppContext, User},

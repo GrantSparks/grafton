@@ -1,23 +1,25 @@
 use std::{fs, io::BufReader, net::SocketAddr, sync::Arc};
 
-use askama_axum::IntoResponse;
-use axum_login::{
-    axum::{extract::Request, Router},
-    tower_sessions::{cookie::SameSite, Expiry, MemoryStore, SessionManagerLayer},
+use {
+    askama_axum::IntoResponse,
+    axum_login::{
+        axum::{extract::Request, Router},
+        tower_sessions::{cookie::SameSite, Expiry, MemoryStore, SessionManagerLayer},
+    },
+    hyper::body::Incoming,
+    hyper_util::{
+        rt::{TokioExecutor, TokioIo},
+        server::conn::auto::Builder as AutoBuilder,
+    },
+    rustls::{Certificate, PrivateKey, ServerConfig},
+    rustls_pemfile as pemfile,
+    time::Duration,
+    tls_listener::TlsListener,
+    tokio::net::TcpListener,
+    tokio_rustls::TlsAcceptor,
+    tower::ServiceExt,
+    tracing::{error, warn},
 };
-use hyper::body::Incoming;
-use hyper_util::{
-    rt::{TokioExecutor, TokioIo},
-    server::conn::auto::Builder as AutoBuilder,
-};
-use rustls::{Certificate, PrivateKey, ServerConfig};
-use rustls_pemfile as pemfile;
-use time::Duration;
-use tls_listener::TlsListener;
-use tokio::net::TcpListener;
-use tokio_rustls::TlsAcceptor;
-use tower::ServiceExt;
-use tracing::{error, warn};
 
 use crate::{
     model::AppContext,
