@@ -3,8 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use askama_axum::IntoResponse;
 use axum::{middleware::Next, response::Redirect};
 use axum_login::{
-    axum::{error_handling::HandleErrorLayer, middleware::from_fn, BoxError},
-    http::StatusCode,
+    axum::{error_handling::HandleErrorLayer, http::StatusCode, middleware::from_fn, BoxError},
     tower_sessions::{MemoryStore, SessionManagerLayer},
     urlencoding, AuthManagerLayerBuilder,
 };
@@ -101,7 +100,7 @@ impl App {
             .layer(AuthManagerLayerBuilder::new(backend, self.session_layer).build());
 
         let login_url = Arc::new(self.login_url);
-        let auth_middleware = from_fn(move |auth_session: AuthSession, req, next: Next<_>| {
+        let auth_middleware = from_fn(move |auth_session: AuthSession, req, next: Next| {
             let login_url_clone = login_url.clone();
             async move {
                 if auth_session.user.is_some() {

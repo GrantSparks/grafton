@@ -5,13 +5,10 @@ use axum_login::{
     axum::{
         async_trait,
         extract::Query,
+        http::StatusCode,
         response::{IntoResponse, Redirect},
         routing::{get, post},
         Form,
-    },
-    http::{
-        header::{AUTHORIZATION, USER_AGENT},
-        StatusCode,
     },
     tower_sessions::Session,
     AuthnBackend, UserId,
@@ -22,6 +19,7 @@ use oauth2::{
     url::Url,
     AuthorizationCode, CsrfToken, TokenResponse,
 };
+use reqwest::header::{HeaderName as ReqwestHeaderName, HeaderValue};
 use serde::Deserialize;
 use sqlx::SqlitePool;
 
@@ -156,16 +154,21 @@ impl AuthnBackend for Backend {
                 .await
                 .map_err(Self::Error::OAuth2)?;
 
+            let user_agent_header = ReqwestHeaderName::from_static("user-agent");
+            let authorization_header = ReqwestHeaderName::from_static("authorization");
+
+            let user_agent_value = HeaderValue::from_static("axum-login");
+            let authorization_value =
+                HeaderValue::from_str(&format!("Bearer {}", token_res.access_token().secret()))
+                    .map_err(AppError::InvalidHttpHeaderValue)?;
+
             let login_id;
             match creds.provider.as_str() {
                 "github" => {
                     let user_info = reqwest::Client::new()
                         .get("https://api.github.com/user")
-                        .header(USER_AGENT, "axum-login") // See: https://docs.github.com/en/rest/overview/resources-in-the-rest-api?apiVersion=2022-11-28#user-agent-required
-                        .header(
-                            AUTHORIZATION,
-                            format!("Bearer {}", token_res.access_token().secret()),
-                        )
+                        .header(user_agent_header, user_agent_value)
+                        .header(authorization_header, authorization_value)
                         .send()
                         .await
                         .map_err(Self::Error::Reqwest)?
@@ -178,10 +181,7 @@ impl AuthnBackend for Backend {
                 "google" => {
                     let user_info = reqwest::Client::new()
                         .get("https://www.googleapis.com/oauth2/v3/userinfo")
-                        .header(
-                            AUTHORIZATION,
-                            format!("Bearer {}", token_res.access_token().secret()),
-                        )
+                        .header(authorization_header, authorization_value)
                         .send()
                         .await
                         .map_err(Self::Error::Reqwest)?

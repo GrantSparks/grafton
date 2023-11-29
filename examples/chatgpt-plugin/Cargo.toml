@@ -12,8 +12,10 @@ include = [
 ]
 
 [dependencies]
-axum-server = "*"
-tokio = "*"
+
+[dependencies.tokio]
+features = ["full"]
+version = "1"
 
 [dependencies.grafton-server]
 path = "../../grafton-server"

@@ -3,10 +3,10 @@ use std::sync::Arc;
 use axum_login::{
     axum::{
         extract::{Path, Query},
+        http::StatusCode,
         response::{IntoResponse, Redirect},
         routing::get,
     },
-    http::StatusCode,
     tower_sessions::Session,
 };
 use oauth2::CsrfToken;

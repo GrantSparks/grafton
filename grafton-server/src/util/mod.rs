@@ -1,6 +1,6 @@
 mod config;
 
-pub use config::{ClientConfig, Config};
+pub use config::{ClientConfig, Config, SslConfig};
 
 mod logger;
 pub use logger::TracingLogger;

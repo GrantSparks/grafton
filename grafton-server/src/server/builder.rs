@@ -1,14 +1,30 @@
-use std::{error::Error, net::SocketAddr, path::PathBuf, sync::Arc};
+use std::{fs, io::BufReader, net::SocketAddr, sync::Arc};
 
+use askama_axum::IntoResponse;
 use axum_login::{
-    axum::routing::IntoMakeService,
+    axum::{extract::Request, Router},
     tower_sessions::{cookie::SameSite, Expiry, MemoryStore, SessionManagerLayer},
 };
-use axum_server::tls_rustls::RustlsConfig;
+use hyper::body::Incoming;
+use hyper_util::{
+    rt::{TokioExecutor, TokioIo},
+    server::conn::auto::Builder as AutoBuilder,
+};
+use rustls::{Certificate, PrivateKey, ServerConfig};
+use rustls_pemfile as pemfile;
 use time::Duration;
-use tracing::{debug, error};
+use tls_listener::TlsListener;
+use tokio::net::TcpListener;
+use tokio_rustls::TlsAcceptor;
+use tower::ServiceExt;
+use tracing::{error, warn};
 
-use crate::{model::AppContext, util::Config, web::App, AppError};
+use crate::{
+    model::AppContext,
+    util::{Config, SslConfig},
+    web::App,
+    AppError,
+};
 
 pub struct Server {
     router: axum_login::axum::Router,
@@ -17,37 +33,67 @@ pub struct Server {
 
 impl Server {
     pub async fn start(self) -> Result<(), AppError> {
-        let make_web_service = self.router.into_make_service();
-
-        let http_addr = SocketAddr::from((
+        let http_addr = (
             self.config.website.bind_address,
             self.config.website.bind_ports.http,
-        ));
+        )
+            .into();
 
         if self.config.website.bind_ssl_config.enabled {
-            let https_addr = SocketAddr::from((
+            let https_addr = (
                 self.config.website.bind_address,
                 self.config.website.bind_ports.https,
-            ));
-            let ssl_config = RustlsConfig::from_pem_file(
-                PathBuf::from(&self.config.website.bind_ssl_config.cert_path),
-                PathBuf::from(&self.config.website.bind_ssl_config.key_path),
             )
-            .await?;
+                .into();
 
-            match start_https_server(https_addr, make_web_service, ssl_config) {
-                Ok(_) => debug!("grafton server started https"),
-                Err(e) => error!("Failed to start grafton server: {}", e),
-            }
+            let tls_acceptor = create_tls_acceptor(&self.config.website.bind_ssl_config)?;
+            let https_router = self.router.clone();
+
+            tokio::spawn(async move {
+                if let Err(e) = serve_https(https_addr, https_router, tls_acceptor).await {
+                    error!("Failed to start HTTPS server: {}", e);
+                }
+            });
         } else {
-            match start_http_server(http_addr, make_web_service) {
-                Ok(_) => debug!("grafton server started http"),
-                Err(e) => error!("Failed to start grafton server: {}", e),
-            }
-        };
+            tokio::spawn(async move {
+                if let Err(e) = serve_http(http_addr, self.router.clone()).await {
+                    error!("Failed to start HTTP server: {}", e);
+                }
+            });
+        }
 
         Ok(())
     }
+}
+
+fn create_tls_acceptor(ssl_config: &SslConfig) -> Result<TlsAcceptor, AppError> {
+    let cert_file = fs::File::open(&ssl_config.cert_path)?;
+    let mut cert_reader = BufReader::new(cert_file);
+    let cert_chain = pemfile::certs(&mut cert_reader)?
+        .into_iter()
+        .map(Certificate)
+        .collect::<Vec<_>>();
+
+    let key_file = fs::File::open(&ssl_config.key_path)?;
+    let mut key_reader = BufReader::new(key_file);
+    let keys = pemfile::pkcs8_private_keys(&mut key_reader)?
+        .into_iter()
+        .map(PrivateKey)
+        .collect::<Vec<_>>();
+
+    if keys.is_empty() {
+        return Err(AppError::ConfigError(
+            "No private keys found in key file".to_string(),
+        ));
+    }
+
+    let config = ServerConfig::builder()
+        .with_safe_defaults()
+        .with_no_client_auth() // GMS: TODO: verify correct setting for axum-login
+        .with_single_cert(cert_chain, keys[0].clone())?;
+
+    let acceptor = TlsAcceptor::from(Arc::new(config));
+    Ok(acceptor)
 }
 
 pub struct ServerBuilder {
@@ -77,9 +123,7 @@ impl ServerBuilder {
         let app_result = App::new(context.clone(), session_layer).await;
         let app = match app_result {
             Ok(app) => app,
-            Err(e) => {
-                return Err(e);
-            }
+            Err(e) => return Err(e),
         };
 
         let inner_router = app.create_auth_router();
@@ -106,33 +150,93 @@ fn create_session_layer() -> SessionManagerLayer<MemoryStore> {
         .with_expiry(Expiry::OnInactivity(Duration::days(1)))
 }
 
-fn start_https_server(
-    https_addr: SocketAddr,
-    web_service: IntoMakeService<axum_login::axum::Router>,
-    config: RustlsConfig,
-) -> Result<(), Box<dyn Error + Send + Sync>> {
-    debug!("https listening on {}", https_addr);
+async fn serve_https(
+    addr: SocketAddr,
+    router: Router,
+    tls_acceptor: TlsAcceptor,
+) -> Result<(), AppError> {
+    let tcp_listener = TcpListener::bind(addr).await.map_err(AppError::IoError)?;
 
-    tokio::task::spawn(async move {
-        axum_server::bind_rustls(https_addr, config)
-            .serve(web_service)
-            .await
-    });
+    let mut listener = TlsListener::new(tls_acceptor, tcp_listener);
+
+    loop {
+        let router_clone = router.clone();
+
+        match listener.accept().await {
+            Some(Ok((stream, _))) => {
+                let io = TokioIo::new(stream);
+
+                tokio::task::spawn(async move {
+                    let service = hyper::service::service_fn(move |req: Request<Incoming>| {
+                        let router = router_clone.clone();
+                        async move {
+                            match router.oneshot(req).await {
+                                Ok(response) => Ok::<_, hyper::Error>(response),
+                                Err(e) => {
+                                    error!("Encountered an error: {:?}", e);
+                                    Ok::<_, hyper::Error>(e.into_response())
+                                }
+                            }
+                        }
+                    });
+
+                    if let Err(err) = AutoBuilder::new(TokioExecutor::new())
+                        .serve_connection(io, service)
+                        .await
+                    {
+                        error!("Error serving connection: {:?}", err);
+                    }
+                });
+            }
+            Some(Err(err)) => {
+                if let Some(remote_addr) = err.peer_addr() {
+                    warn!("[client {remote_addr}] Error accepting connection: {}", err);
+                } else {
+                    warn!("Error accepting connection: {}", err);
+                }
+            }
+            None => break, // Exit the loop if None is returned
+        }
+    }
 
     Ok(())
 }
 
-fn start_http_server(
-    http_addr: SocketAddr,
-    web_service: IntoMakeService<axum_login::axum::Router>,
-) -> Result<(), Box<dyn Error + Send + Sync>> {
-    debug!("http listening on {}", http_addr);
+async fn serve_http(addr: SocketAddr, router: Router) -> Result<(), AppError> {
+    let listener = TcpListener::bind(addr).await?;
 
-    tokio::task::spawn(async move {
-        axum_server::Server::bind(http_addr)
-            .serve(web_service)
-            .await
-    });
+    loop {
+        let router_clone = router.clone();
 
-    Ok(())
+        match listener.accept().await {
+            Ok((stream, _)) => {
+                let io = TokioIo::new(stream);
+
+                tokio::task::spawn(async move {
+                    let service = hyper::service::service_fn(move |req: Request<Incoming>| {
+                        let router = router_clone.clone();
+                        async move {
+                            match router.oneshot(req).await {
+                                Ok(response) => Ok::<_, hyper::Error>(response),
+                                Err(e) => {
+                                    error!("Encountered an error: {:?}", e);
+                                    Ok::<_, hyper::Error>(e.into_response())
+                                }
+                            }
+                        }
+                    });
+
+                    if let Err(err) = AutoBuilder::new(TokioExecutor::new())
+                        .serve_connection(io, service)
+                        .await
+                    {
+                        error!("Error serving connection: {:?}", err);
+                    }
+                });
+            }
+            Err(e) => {
+                error!("Failed to accept connection: {:?}", e);
+            }
+        }
+    }
 }
