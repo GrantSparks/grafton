@@ -27,9 +27,11 @@ Unless explicitly stated otherwise, all files in this repository are licensed un
 
 #### Key Features of the Apache License 2.0:
 
-- **Permissive License**: Significant freedom in the use and modification of the software.
-- **Explicit Patent License**: Grants patent rights from contributors to users, safeguarding both parties.
-- **Protection Against Patent Litigation**: Mitigates the risk of patent-related issues for users and contributors.
+* **Permissive License**: Enables free commercial and non-commercial use, distribution, and modification of the software without requiring source code access. Allows combining with other open source licenses.
+
+* **Explicit Patent License**: Grants an express patent license from all contributors to users, protecting both parties from patent infringement claims related to the software.  
+
+* **Patent Retaliation Provision**: Terminates the license for any party that files a patent infringement lawsuit alleging that the software infringes a patent, thus protecting users and contributors.
 
 ### Commercial License
 
