@@ -8,7 +8,7 @@ use {
     },
 };
 
-use crate::{model::AppContext, web::auth::AuthSession};
+use crate::{model::AppContext, web::oauth2::AuthSession};
 
 #[derive(Template)]
 #[template(path = "protected.html")]

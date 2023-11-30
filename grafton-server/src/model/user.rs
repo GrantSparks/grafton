@@ -71,7 +71,7 @@ impl AuthUser for User {
     type Id = i64;
 
     fn session_auth_hash(&self) -> &[u8] {
-        self.access_token.secret().as_bytes()
+        self.access_token.secret().as_bytes() // TODO: improve less than ideal hash function
     }
 
     fn id(&self) -> Self::Id {

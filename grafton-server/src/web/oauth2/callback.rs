@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use crate::model::AppContext;
+
 use {
     axum_login::{
         axum::{
@@ -10,31 +12,21 @@ use {
         },
         tower_sessions::Session,
     },
-    oauth2::CsrfToken,
-    serde::Deserialize,
     tracing::{debug, error, warn},
 };
-
-use crate::{
-    model::AppContext,
-    web::auth::Credentials,
-    web::auth::{LoginTemplate, NEXT_URL_KEY},
-};
-
-pub const CSRF_STATE_KEY: &str = "oauth.csrf-state";
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct AuthzResp {
-    code: String,
-    state: CsrfToken,
-}
 
 pub fn router() -> axum_login::axum::Router<Arc<AppContext>> {
     axum_login::axum::Router::new().route("/oauth/:provider/callback", get(self::get::callback))
 }
 
 mod get {
-    use crate::web::auth::AuthSession;
+    use crate::web::{
+        oauth2::{
+            login::{LoginTemplate, NEXT_URL_KEY},
+            AuthSession, AuthzResp, CSRF_STATE_KEY,
+        },
+        Credentials,
+    };
 
     use super::*;
 

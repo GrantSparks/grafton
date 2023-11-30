@@ -1,7 +1,6 @@
-pub use app::App;
-pub use auth::Credentials;
+pub(crate) use app::App;
+pub(crate) use oauth2::Credentials;
 
 mod app;
-mod auth;
-mod oauth;
-mod protected;
+mod oauth2;
+mod routers;

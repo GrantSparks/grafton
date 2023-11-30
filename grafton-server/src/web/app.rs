@@ -14,11 +14,15 @@ use {
     tracing::{debug, error, info, warn},
 };
 
-use super::auth::{AuthSession, Backend};
 use crate::{
     error::AppError,
     model::AppContext,
-    web::{auth, oauth, protected},
+    web::{
+        oauth2::{
+            create_callback_router, create_login_router, create_logout_router, AuthSession, Backend,
+        },
+        routers::protected,
+    },
 };
 
 pub struct App {
@@ -126,8 +130,9 @@ impl App {
 
         protected::router()
             .route_layer(auth_middleware)
-            .merge(auth::router())
-            .merge(oauth::router())
+            .merge(create_login_router())
+            .merge(create_callback_router())
+            .merge(create_logout_router())
             .layer(auth_service)
     }
 }

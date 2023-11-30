@@ -1,19 +1,7 @@
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
 use {
-    askama::Template,
-    axum_login::{
-        axum::{
-            async_trait,
-            extract::Query,
-            http::StatusCode,
-            response::{IntoResponse, Redirect},
-            routing::{get, post},
-            Form,
-        },
-        tower_sessions::Session,
-        AuthnBackend, UserId,
-    },
+    axum_login::{axum::async_trait, AuthnBackend, UserId},
     oauth2::{
         basic::{BasicClient, BasicRequestTokenError},
         reqwest::async_http_client,
@@ -25,87 +13,9 @@ use {
     sqlx::SqlitePool,
 };
 
-use crate::{
-    model::{AppContext, User},
-    web::oauth::CSRF_STATE_KEY,
-    AppError,
-};
+use crate::{model::User, AppError};
 
-pub const NEXT_URL_KEY: &str = "auth.next-url";
-
-#[derive(Template)]
-#[template(path = "login.html")]
-pub struct LoginTemplate {
-    pub message: Option<String>,
-    pub next: Option<String>,
-}
-
-// This allows us to extract the "next" field from the query string. We use this
-// to redirect after log in.
-#[derive(Debug, Deserialize)]
-pub struct NextUrl {
-    next: Option<String>,
-}
-
-pub fn router() -> axum_login::axum::Router<Arc<AppContext>> {
-    axum_login::axum::Router::new()
-        .route("/login/:provider", post(self::post::login))
-        .route("/login/:provider", get(self::get::login))
-        .route("/logout", get(self::get::logout))
-}
-
-mod post {
-    use axum::extract::Path;
-
-    use super::*;
-
-    pub async fn login(
-        auth_session: AuthSession,
-        session: Session,
-        Path(provider): Path<String>,
-        Form(NextUrl { next }): Form<NextUrl>,
-    ) -> impl IntoResponse {
-        match auth_session.backend.authorize_url(provider.clone()) {
-            Ok((url, token)) => {
-                session
-                    .insert(CSRF_STATE_KEY, token.secret())
-                    .expect("Serialization should not fail.");
-                session
-                    .insert(NEXT_URL_KEY, next)
-                    .expect("Serialization should not fail.");
-
-                Redirect::to(url.as_str()).into_response()
-            }
-            Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-        }
-    }
-}
-
-mod get {
-    use super::*;
-
-    pub async fn login(Query(NextUrl { next }): Query<NextUrl>) -> LoginTemplate {
-        LoginTemplate {
-            message: None,
-            next,
-        }
-    }
-
-    pub async fn logout(mut auth_session: AuthSession) -> impl IntoResponse {
-        match auth_session.logout() {
-            Ok(_) => Redirect::to("/login/github").into_response(),
-            Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct Credentials {
-    pub code: String,
-    pub old_state: CsrfToken,
-    pub new_state: CsrfToken,
-    pub provider: String,
-}
+use super::Credentials;
 
 #[derive(Debug, Deserialize)]
 struct UserInfo {
@@ -113,7 +23,7 @@ struct UserInfo {
 }
 
 #[derive(Debug, Clone)]
-pub struct Backend {
+pub(crate) struct Backend {
     db: SqlitePool,
     oauth_clients: HashMap<String, BasicClient>,
 }
@@ -231,5 +141,3 @@ impl AuthnBackend for Backend {
             .map_err(Self::Error::Sqlx)?)
     }
 }
-
-pub type AuthSession = axum_login::AuthSession<Backend>;
