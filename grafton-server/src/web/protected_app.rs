@@ -25,14 +25,14 @@ use crate::{
     },
 };
 
-pub struct App {
+pub struct ProtectedApp {
     db: SqlitePool,
     oauth_clients: HashMap<String, BasicClient>,
     session_layer: SessionManagerLayer<MemoryStore>,
     login_url: String,
 }
 
-impl App {
+impl ProtectedApp {
     pub async fn new(
         app_ctx: Arc<AppContext>,
         session_layer: SessionManagerLayer<MemoryStore>,

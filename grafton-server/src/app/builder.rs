@@ -3,8 +3,8 @@ use std::sync::Arc;
 use tracing::debug;
 
 use crate::{
-    app::middleware::session::create_session_layer, model::AppContext, util::Config, web::App,
-    AppError,
+    app::middleware::session::create_session_layer, model::AppContext, util::Config,
+    web::ProtectedApp, AppError,
 };
 
 use super::server::Server;
@@ -35,7 +35,7 @@ impl ServerBuilder {
 
         let session_layer = create_session_layer();
 
-        let app_result = App::new(context.clone(), session_layer).await;
+        let app_result = ProtectedApp::new(context.clone(), session_layer).await;
         let app = match app_result {
             Ok(app) => app,
             Err(e) => return Err(e),
