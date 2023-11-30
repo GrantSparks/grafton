@@ -5,6 +5,7 @@
 run_mode = "dev"
 
 [website]
+bind_ssl_config = { enabled = false }
 bind_ports = { http = 8080 }
 public_ports = { http = 8080 }
 
