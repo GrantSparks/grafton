@@ -1,6 +1,6 @@
+mod app;
 mod error;
 pub mod model;
-mod server;
 mod util;
 mod web;
 
@@ -8,8 +8,8 @@ mod web;
 mod rbac;
 
 pub use {
+    app::ServerBuilder,
     error::AppError,
-    server::ServerBuilder,
     tracing,
     util::{ClientConfig, Config, TracingLogger},
 };

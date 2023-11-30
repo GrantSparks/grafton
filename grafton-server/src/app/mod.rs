@@ -2,10 +2,7 @@ use std::{fs, io::BufReader, net::SocketAddr, sync::Arc};
 
 use {
     askama_axum::IntoResponse,
-    axum_login::{
-        axum::{extract::Request, Router},
-        tower_sessions::{cookie::SameSite, Expiry, MemoryStore, SessionManagerLayer},
-    },
+    axum_login::axum::{extract::Request, Router},
     hyper::body::Incoming,
     hyper_util::{
         rt::{TokioExecutor, TokioIo},
@@ -13,63 +10,20 @@ use {
     },
     rustls::{Certificate, PrivateKey, ServerConfig},
     rustls_pemfile as pemfile,
-    time::Duration,
     tls_listener::{rustls::TlsAcceptor, TlsListener},
     tokio::net::TcpListener,
     tower::ServiceExt,
     tracing::{debug, error, warn},
 };
 
-use crate::{
-    model::AppContext,
-    util::{Config, SslConfig},
-    web::App,
-    AppError,
-};
+use crate::{util::SslConfig, AppError};
 
-pub struct Server {
-    router: axum_login::axum::Router,
-    config: Arc<Config>,
-}
+mod builder;
+// mod hybrid; // TODO:  Update with tonic
+mod middleware;
+mod server;
 
-impl Server {
-    pub async fn start(self) -> Result<(), AppError> {
-        debug!("Starting server with configuration: {:?}", self.config);
-
-        if self.config.website.bind_ssl_config.enabled {
-            let https_addr = (
-                self.config.website.bind_address,
-                self.config.website.bind_ports.https,
-            )
-                .into();
-
-            let tls_acceptor = create_tls_acceptor(&self.config.website.bind_ssl_config)?;
-
-            let https_router = self.router.clone();
-            tokio::spawn(async move {
-                if let Err(e) = serve_https(https_addr, https_router, tls_acceptor).await {
-                    error!("Failed to start HTTPS server: {}", e);
-                }
-            });
-        } else {
-            let http_addr = (
-                self.config.website.bind_address,
-                self.config.website.bind_ports.http,
-            )
-                .into();
-
-            let http_router = self.router.clone();
-            tokio::spawn(async move {
-                if let Err(e) = serve_http(http_addr, http_router).await {
-                    error!("Failed to start HTTP server: {}", e);
-                }
-            });
-        }
-
-        debug!("Server started successfully");
-        Ok(())
-    }
-}
+pub use builder::ServerBuilder;
 
 fn create_tls_acceptor(ssl_config: &SslConfig) -> Result<TlsAcceptor, AppError> {
     debug!("Creating TLS Acceptor with SSL Config: {:?}", ssl_config);
@@ -123,71 +77,6 @@ fn create_tls_acceptor(ssl_config: &SslConfig) -> Result<TlsAcceptor, AppError> 
 
     debug!("TLS Acceptor created successfully");
     Ok(acceptor)
-}
-
-pub struct ServerBuilder {
-    app_ctx: Arc<AppContext>,
-    inner_router: axum_login::axum::Router<std::sync::Arc<AppContext>>,
-}
-
-impl ServerBuilder {
-    pub async fn new(config: Config) -> Result<Self, AppError> {
-        debug!("Initializing ServerBuilder with config: {:?}", config);
-
-        let context = {
-            #[cfg(feature = "rbac")]
-            {
-                use crate::rbac;
-                let oso = rbac::initialize(&config)?;
-                AppContext::new(config, oso)?
-            }
-            #[cfg(not(feature = "rbac"))]
-            {
-                AppContext::new(config)?
-            }
-        };
-
-        let context = Arc::new(context);
-
-        let session_layer = create_session_layer();
-
-        let app_result = App::new(context.clone(), session_layer).await;
-        let app = match app_result {
-            Ok(app) => app,
-            Err(e) => return Err(e),
-        };
-
-        let inner_router = app.create_auth_router();
-
-        debug!("ServerBuilder initialized");
-        Ok(Self {
-            app_ctx: context,
-            inner_router,
-        })
-    }
-
-    pub fn build(self) -> Result<Server, AppError> {
-        debug!("Building server");
-
-        let config = self.app_ctx.config.clone();
-        let router = self.inner_router.with_state(self.app_ctx);
-
-        debug!("Server built successfully");
-        Ok(Server { router, config })
-    }
-}
-
-fn create_session_layer() -> SessionManagerLayer<MemoryStore> {
-    debug!("Creating session layer");
-
-    let session_store = MemoryStore::default();
-    let session_layer = SessionManagerLayer::new(session_store)
-        .with_secure(false)
-        .with_same_site(SameSite::Lax)
-        .with_expiry(Expiry::OnInactivity(Duration::days(1)));
-
-    debug!("Session layer created");
-    session_layer
 }
 
 async fn serve_https(
