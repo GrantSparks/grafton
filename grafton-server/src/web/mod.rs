@@ -1,4 +1,4 @@
-pub(crate) use oauth2::Credentials;
+pub(crate) use oauth2::{backend::Backend, Credentials};
 pub(crate) use protected_app::ProtectedApp;
 
 mod oauth2;

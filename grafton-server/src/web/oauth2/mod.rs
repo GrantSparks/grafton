@@ -9,8 +9,7 @@ pub(crate) use callback::router as create_callback_router;
 mod login;
 pub(crate) use login::router as create_login_router;
 
-mod backend;
-pub(crate) use backend::Backend;
+pub(crate) mod backend;
 
 pub(crate) const CSRF_STATE_KEY: &str = "oauth.csrf-state";
 
@@ -27,5 +26,3 @@ pub(crate) struct Credentials {
     pub new_state: CsrfToken,
     pub provider: String,
 }
-
-pub type AuthSession = axum_login::AuthSession<backend::Backend>;

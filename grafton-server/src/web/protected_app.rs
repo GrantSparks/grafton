@@ -15,15 +15,15 @@ use {
 };
 
 use crate::{
+    core::AxumRouter,
     error::AppError,
     model::AppContext,
-    r#type::AxumRouter,
     web::{
-        oauth2::{
-            create_callback_router, create_login_router, create_logout_router, AuthSession, Backend,
-        },
+        oauth2::{create_callback_router, create_login_router, create_logout_router},
         router::protected,
+        Backend,
     },
+    AuthSession,
 };
 
 pub struct ProtectedApp {

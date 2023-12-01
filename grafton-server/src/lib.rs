@@ -4,8 +4,8 @@ pub mod model;
 mod util;
 mod web;
 
-mod r#type;
-pub use r#type::*;
+mod core;
+pub use core::*;
 
 #[cfg(feature = "rbac")]
 mod rbac;

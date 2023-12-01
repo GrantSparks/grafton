@@ -4,7 +4,7 @@ use {
     serde::Deserialize,
 };
 
-use crate::r#type::AxumRouter;
+use crate::core::AxumRouter;
 
 pub const NEXT_URL_KEY: &str = "auth.next-url";
 
@@ -35,7 +35,7 @@ mod post {
         },
     };
 
-    use crate::web::{oauth2::AuthSession, oauth2::CSRF_STATE_KEY};
+    use crate::{web::oauth2::CSRF_STATE_KEY, AuthSession};
 
     use super::{NextUrl, NEXT_URL_KEY};
 

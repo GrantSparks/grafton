@@ -11,19 +11,22 @@ use {
     tracing::{debug, error, warn},
 };
 
-use crate::r#type::AxumRouter;
+use crate::core::AxumRouter;
 
 pub fn router() -> AxumRouter {
     AxumRouter::new().route("/oauth/:provider/callback", get(self::get::callback))
 }
 
 mod get {
-    use crate::web::{
-        oauth2::{
-            login::{LoginTemplate, NEXT_URL_KEY},
-            AuthSession, AuthzResp, CSRF_STATE_KEY,
+    use crate::{
+        web::{
+            oauth2::{
+                login::{LoginTemplate, NEXT_URL_KEY},
+                AuthzResp, CSRF_STATE_KEY,
+            },
+            Credentials,
         },
-        Credentials,
+        AuthSession,
     };
 
     use super::*;

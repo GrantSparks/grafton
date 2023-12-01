@@ -3,7 +3,7 @@ use std::sync::Arc;
 use tracing::debug;
 
 use crate::{
-    app::middleware::session::create_session_layer, model::AppContext, r#type::AxumRouter,
+    app::middleware::session::create_session_layer, core::AxumRouter, model::AppContext,
     util::Config, web::ProtectedApp, AppError,
 };
 

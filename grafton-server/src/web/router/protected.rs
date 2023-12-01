@@ -5,7 +5,7 @@ use {
     axum_login::axum::{routing::get, Router},
 };
 
-use crate::{model::AppContext, r#type::AxumRouter};
+use crate::{core::AxumRouter, model::AppContext};
 
 #[derive(Template)]
 #[template(path = "protected.html")]
@@ -19,13 +19,13 @@ pub fn router() -> AxumRouter {
 
 mod get {
 
+    use crate::AuthSession;
+
     use super::*;
 
     use axum_login::axum::{
         debug_handler, extract::State, http::StatusCode, response::IntoResponse,
     };
-
-    use crate::web::oauth2::AuthSession;
 
     #[debug_handler]
     pub async fn protected(

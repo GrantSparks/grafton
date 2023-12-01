@@ -1,6 +1,6 @@
 use axum_login::axum::routing::get;
 
-use crate::r#type::AxumRouter;
+use crate::core::AxumRouter;
 
 pub fn router() -> AxumRouter {
     AxumRouter::new().route("/logout", get(self::get::logout))
@@ -12,7 +12,7 @@ mod get {
         response::{IntoResponse, Redirect},
     };
 
-    use crate::web::oauth2::AuthSession;
+    use crate::AuthSession;
 
     pub async fn logout(mut auth_session: AuthSession) -> impl IntoResponse {
         match auth_session.logout() {
