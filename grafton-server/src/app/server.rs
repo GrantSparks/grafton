@@ -3,7 +3,7 @@ use std::sync::Arc;
 use tracing::{debug, error};
 
 use crate::{
-    app::{create_tls_acceptor, serve_http, serve_https},
+    util::http::{create_tls_acceptor, serve_http, serve_https},
     AppError, Config,
 };
 
