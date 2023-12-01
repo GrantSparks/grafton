@@ -21,7 +21,7 @@ use crate::{
         oauth2::{
             create_callback_router, create_login_router, create_logout_router, AuthSession, Backend,
         },
-        routers::protected,
+        router::protected,
     },
 };
 
