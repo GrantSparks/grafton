@@ -1,6 +1,4 @@
-use std::sync::Arc;
-
-use crate::model::AppContext;
+use crate::model::AxumRouter;
 
 use {
     axum_login::{
@@ -15,8 +13,8 @@ use {
     tracing::{debug, error, warn},
 };
 
-pub fn router() -> axum_login::axum::Router<Arc<AppContext>> {
-    axum_login::axum::Router::new().route("/oauth/:provider/callback", get(self::get::callback))
+pub fn router() -> AxumRouter {
+    AxumRouter::new().route("/oauth/:provider/callback", get(self::get::callback))
 }
 
 mod get {

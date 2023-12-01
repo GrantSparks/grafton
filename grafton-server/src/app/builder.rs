@@ -3,15 +3,18 @@ use std::sync::Arc;
 use tracing::debug;
 
 use crate::{
-    app::middleware::session::create_session_layer, model::AppContext, util::Config,
-    web::ProtectedApp, AppError,
+    app::middleware::session::create_session_layer,
+    model::{AppContext, AxumRouter},
+    util::Config,
+    web::ProtectedApp,
+    AppError,
 };
 
 use super::server::Server;
 
 pub struct ServerBuilder {
     pub app_ctx: Arc<AppContext>,
-    pub inner_router: axum_login::axum::Router<std::sync::Arc<AppContext>>,
+    pub inner_router: AxumRouter,
 }
 
 impl ServerBuilder {

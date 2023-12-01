@@ -1,17 +1,13 @@
-use std::sync::Arc;
-
 use {
     askama::Template,
     axum_login::axum::routing::{get, post},
     serde::Deserialize,
 };
 
-use crate::model::AppContext;
+use crate::model::AxumRouter;
 
 pub const NEXT_URL_KEY: &str = "auth.next-url";
 
-// This allows us to extract the "next" field from the query string. We use this
-// to redirect after log in.
 #[derive(Debug, Deserialize)]
 pub struct NextUrl {
     next: Option<String>,
@@ -24,8 +20,8 @@ pub struct LoginTemplate {
     pub next: Option<String>,
 }
 
-pub fn router() -> axum_login::axum::Router<Arc<AppContext>> {
-    axum_login::axum::Router::new()
+pub fn router() -> AxumRouter {
+    AxumRouter::new()
         .route("/login/:provider", post(self::post::login))
         .route("/login/:provider", get(self::get::login))
 }

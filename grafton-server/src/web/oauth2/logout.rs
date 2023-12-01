@@ -1,11 +1,9 @@
-use std::sync::Arc;
-
 use axum_login::axum::routing::get;
 
-use crate::model::AppContext;
+use crate::model::AxumRouter;
 
-pub fn router() -> axum_login::axum::Router<Arc<AppContext>> {
-    axum_login::axum::Router::new().route("/logout", get(self::get::logout))
+pub fn router() -> AxumRouter {
+    AxumRouter::new().route("/logout", get(self::get::logout))
 }
 
 mod get {

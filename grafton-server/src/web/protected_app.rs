@@ -16,7 +16,7 @@ use {
 
 use crate::{
     error::AppError,
-    model::AppContext,
+    model::{AppContext, AxumRouter},
     web::{
         oauth2::{
             create_callback_router, create_login_router, create_logout_router, AuthSession, Backend,
@@ -98,7 +98,7 @@ impl ProtectedApp {
         })
     }
 
-    pub fn create_auth_router(self) -> axum_login::axum::Router<Arc<AppContext>> {
+    pub fn create_auth_router(self) -> AxumRouter {
         debug!("Creating auth router");
         // Auth service.
         //
@@ -128,7 +128,7 @@ impl ProtectedApp {
         });
         info!("Auth middleware created");
 
-        protected::router()
+        protected::router() // TODO: This should be passed-in from the caller.
             .route_layer(auth_middleware)
             .merge(create_login_router())
             .merge(create_callback_router())
