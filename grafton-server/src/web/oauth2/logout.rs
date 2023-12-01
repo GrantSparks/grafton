@@ -1,6 +1,6 @@
 use axum_login::axum::routing::get;
 
-use crate::model::AxumRouter;
+use crate::r#type::AxumRouter;
 
 pub fn router() -> AxumRouter {
     AxumRouter::new().route("/logout", get(self::get::logout))

@@ -5,7 +5,7 @@ use {
     axum_login::axum::{routing::get, Router},
 };
 
-use crate::model::{AppContext, AxumRouter};
+use crate::{model::AppContext, r#type::AxumRouter};
 
 #[derive(Template)]
 #[template(path = "protected.html")]

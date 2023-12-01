@@ -1,5 +1,3 @@
-use crate::model::AxumRouter;
-
 use {
     axum_login::{
         axum::{
@@ -12,6 +10,8 @@ use {
     },
     tracing::{debug, error, warn},
 };
+
+use crate::r#type::AxumRouter;
 
 pub fn router() -> AxumRouter {
     AxumRouter::new().route("/oauth/:provider/callback", get(self::get::callback))

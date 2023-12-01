@@ -4,7 +4,7 @@ use {
     serde::Deserialize,
 };
 
-use crate::model::AxumRouter;
+use crate::r#type::AxumRouter;
 
 pub const NEXT_URL_KEY: &str = "auth.next-url";
 

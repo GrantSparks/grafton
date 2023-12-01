@@ -16,7 +16,8 @@ use {
 
 use crate::{
     error::AppError,
-    model::{AppContext, AxumRouter},
+    model::AppContext,
+    r#type::AxumRouter,
     web::{
         oauth2::{
             create_callback_router, create_login_router, create_logout_router, AuthSession, Backend,
