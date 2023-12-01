@@ -30,12 +30,14 @@ pub struct ProtectedApp {
     oauth_clients: HashMap<String, BasicClient>,
     session_layer: SessionManagerLayer<MemoryStore>,
     login_url: String,
+    protected_router: Option<AxumRouter>,
 }
 
 impl ProtectedApp {
     pub async fn new(
         app_ctx: Arc<AppContext>,
         session_layer: SessionManagerLayer<MemoryStore>,
+        protected_router: Option<AxumRouter>,
     ) -> Result<Self, AppError> {
         let mut oauth_clients = HashMap::new();
 
@@ -95,6 +97,7 @@ impl ProtectedApp {
                 .with_root()
                 .public_login
                 .clone(),
+            protected_router,
         })
     }
 
@@ -128,7 +131,18 @@ impl ProtectedApp {
         });
         info!("Auth middleware created");
 
-        protected::router() // TODO: This should be passed-in from the caller.
+        let router = match self.protected_router {
+            Some(router) => {
+                debug!("Using provided protected_router");
+                router
+            }
+            None => {
+                debug!("No protected_router provided, using default protected::router()");
+                protected::router()
+            }
+        };
+
+        router
             .route_layer(auth_middleware)
             .merge(create_login_router())
             .merge(create_callback_router())

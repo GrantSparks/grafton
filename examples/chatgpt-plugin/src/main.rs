@@ -9,7 +9,7 @@ async fn main() -> Result<(), AppError> {
 
     let builder = ServerBuilder::new(config).await?;
 
-    let server = builder.build()?;
+    let server = builder.build().await?;
 
     server.start().await?;
     info!("Server started successfully");

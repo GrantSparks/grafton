@@ -14,7 +14,7 @@ use super::server::Server;
 
 pub struct ServerBuilder {
     pub app_ctx: Arc<AppContext>,
-    pub inner_router: AxumRouter,
+    pub protected_router: Option<AxumRouter>,
 }
 
 impl ServerBuilder {
@@ -36,30 +36,31 @@ impl ServerBuilder {
 
         let context = Arc::new(context);
 
-        let session_layer = create_session_layer();
-
-        let app_result = ProtectedApp::new(context.clone(), session_layer).await;
-        let app = match app_result {
-            Ok(app) => app,
-            Err(e) => return Err(e),
-        };
-
-        let inner_router = app.create_auth_router();
-
-        debug!("ServerBuilder initialized");
         Ok(Self {
             app_ctx: context,
-            inner_router,
+            protected_router: None,
         })
     }
 
-    pub fn build(self) -> Result<Server, AppError> {
-        debug!("Building server");
+    pub fn with_protected_router(mut self, router: AxumRouter) -> Self {
+        self.protected_router = Some(router);
+        self
+    }
 
-        let config = self.app_ctx.config.clone();
-        let router = self.inner_router.with_state(self.app_ctx);
+    pub async fn build(self) -> Result<Server, AppError> {
+        let app_ctx_clone = self.app_ctx.clone();
 
-        debug!("Server built successfully");
-        Ok(Server { router, config })
+        let router = if let Some(router) = self.protected_router {
+            router.with_state(app_ctx_clone.clone())
+        } else {
+            let session_layer = create_session_layer();
+            let app = ProtectedApp::new(app_ctx_clone.clone(), session_layer, None).await?;
+            app.create_auth_router().with_state(app_ctx_clone.clone())
+        };
+
+        Ok(Server {
+            router,
+            config: self.app_ctx.config.clone(),
+        })
     }
 }
