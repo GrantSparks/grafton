@@ -1,4 +1,10 @@
-use std::{fs, io::BufReader, net::SocketAddr, sync::Arc};
+use std::{
+    fs::File,
+    io::{self, BufReader},
+    net::SocketAddr,
+    path::Path,
+    sync::Arc,
+};
 
 use {
     askama_axum::IntoResponse,
@@ -8,89 +14,131 @@ use {
         rt::{TokioExecutor, TokioIo},
         server::conn::auto::Builder as AutoBuilder,
     },
-    rustls::{Certificate, PrivateKey, ServerConfig},
-    rustls_pemfile as pemfile,
-    tls_listener::{rustls::TlsAcceptor, TlsListener},
+    pki_types::{CertificateDer, PrivateKeyDer},
+    rustls_pemfile::{certs, pkcs8_private_keys},
     tokio::net::TcpListener,
+    tokio_rustls::{rustls::ServerConfig, TlsAcceptor},
     tower::ServiceExt,
-    tracing::{debug, error, warn},
+    tracing::{debug, error},
 };
 
 use crate::{util::SslConfig, AppError};
 
-pub fn create_tls_acceptor(ssl_config: &SslConfig) -> Result<TlsAcceptor, AppError> {
-    debug!("Creating TLS Acceptor with SSL Config: {:?}", ssl_config);
+fn create_tls_config(ssl_config: &SslConfig) -> Result<ServerConfig, AppError> {
+    debug!("Creating TLS Config with SSL Config: {:?}", ssl_config);
 
-    let cert_file = match fs::File::open(&ssl_config.cert_path) {
-        Ok(file) => file,
-        Err(e) => {
-            error!("Failed to open certificate file: {:?}", e);
-            return Err(AppError::IoError(e));
-        }
-    };
-    let mut cert_reader = BufReader::new(cert_file);
-
-    let cert_chain = match pemfile::certs(&mut cert_reader) {
-        Ok(certs) => certs.into_iter().map(Certificate).collect::<Vec<_>>(),
-        Err(_) => {
-            error!("Failed to read certificates from PEM file");
-            return Err(AppError::InvalidCertificate);
-        }
-    };
-
-    let key_file = fs::File::open(&ssl_config.key_path)?;
-    let mut key_reader = BufReader::new(key_file);
-
-    let ec_keys = rustls_pemfile::ec_private_keys(&mut key_reader).map_err(|e| {
-        AppError::InvalidPrivateKey {
-            file_path: ssl_config.key_path.clone(),
-            error: e.to_string(),
-        }
-    })?;
-
-    if ec_keys.is_empty() {
-        error!(
-            "No EC private keys found in key file: {}",
-            ssl_config.key_path
-        );
-        return Err(AppError::NoPrivateKey {
-            file_path: ssl_config.key_path.clone(),
-            error: "The file does not contain valid SEC1 EC private keys or is empty.".to_string(),
-        });
-    }
-
-    let private_key = PrivateKey(ec_keys[0].clone());
+    let certs = load_certs(Path::new(&ssl_config.cert_path))?;
+    let key = load_keys(Path::new(&ssl_config.key_path))?;
 
     let config = ServerConfig::builder()
-        .with_safe_defaults()
-        .with_no_client_auth() // TODO: verify setting for axum-login
-        .with_single_cert(cert_chain, private_key)?;
+        .with_no_client_auth()
+        .with_single_cert(certs, key)
+        .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
 
-    let acceptor: TlsAcceptor = Arc::new(config).into();
+    Ok(config)
+}
 
-    debug!("TLS Acceptor created successfully");
-    Ok(acceptor)
+fn load_certs(path: &Path) -> io::Result<Vec<CertificateDer<'static>>> {
+    debug!("Loading certificates from {:?}", path);
+
+    if !path.exists() {
+        error!("Certificate file path does not exist: {:?}", path);
+        return Err(io::Error::new(io::ErrorKind::NotFound, "Path not found"));
+    }
+
+    let file = match File::open(path) {
+        Ok(file) => {
+            debug!("Certificate file opened successfully");
+            file
+        }
+        Err(e) => {
+            error!("Failed to open certificate file: {:?}", e);
+            return Err(e);
+        }
+    };
+
+    let mut reader = BufReader::new(file);
+    let mut cert_vec = Vec::new();
+
+    for cert in certs(&mut reader) {
+        match cert {
+            Ok(cert) => {
+                debug!("Certificate processed successfully");
+                cert_vec.push(cert);
+            }
+            Err(_) => {
+                error!("Invalid certificate encountered");
+                return Err(io::Error::new(io::ErrorKind::InvalidInput, "invalid cert"));
+            }
+        }
+    }
+
+    if cert_vec.is_empty() {
+        error!("No certificates were loaded from the file");
+        return Err(io::Error::new(io::ErrorKind::InvalidData, "no certs found"));
+    }
+
+    debug!("Certificates loaded successfully");
+    Ok(cert_vec)
+}
+
+fn load_keys(path: &Path) -> io::Result<PrivateKeyDer<'static>> {
+    debug!("Attempting to load keys from {:?}", path);
+
+    if !path.exists() {
+        error!("Path does not exist: {:?}", path);
+        return Err(io::Error::new(io::ErrorKind::NotFound, "Path not found"));
+    }
+
+    let file = match File::open(path) {
+        Ok(file) => {
+            debug!("File opened successfully");
+            file
+        }
+        Err(e) => {
+            error!("Failed to open file: {:?}", e);
+            return Err(e);
+        }
+    };
+
+    let mut reader = BufReader::new(file);
+    let keys: Result<Vec<_>, _> = pkcs8_private_keys(&mut reader).collect();
+
+    match keys {
+        Ok(keys) if keys.is_empty() => {
+            error!("No keys found in the file");
+            Err(io::Error::new(io::ErrorKind::NotFound, "no keys found"))
+        }
+        Ok(mut keys) => {
+            debug!("Keys loaded successfully");
+            Ok(PrivateKeyDer::from(keys.remove(0)))
+        }
+        Err(e) => {
+            error!("Error reading keys: {:?}", e);
+            Err(e)
+        }
+    }
 }
 
 pub async fn serve_https(
     addr: SocketAddr,
     router: Router,
-    tls_acceptor: TlsAcceptor,
+    ssl_config: SslConfig,
 ) -> Result<(), AppError> {
-    debug!("Starting HTTPS server at address {}", addr);
-
-    let tcp_listener = TcpListener::bind(addr).await?;
-
-    let mut listener = TlsListener::new(tls_acceptor, tcp_listener);
+    let server_config = create_tls_config(&ssl_config)?;
+    let acceptor = TlsAcceptor::from(Arc::new(server_config));
+    let listener = TcpListener::bind(&addr).await?;
 
     loop {
+        let (stream, _) = listener.accept().await?;
+        let acceptor = acceptor.clone();
         let router_clone = router.clone();
 
-        match listener.accept().await {
-            Some(Ok((stream, _))) => {
-                let io = TokioIo::new(stream);
+        tokio::spawn(async move {
+            match acceptor.accept(stream).await {
+                Ok(tls_stream) => {
+                    let io = TokioIo::new(tls_stream);
 
-                tokio::task::spawn(async move {
                     let service = hyper::service::service_fn(move |req: Request<Incoming>| {
                         let router = router_clone.clone();
                         async move {
@@ -108,23 +156,15 @@ pub async fn serve_https(
                         .serve_connection(io, service)
                         .await
                     {
-                        error!("Error serving connection: {:?}, Addr: {}", err, addr);
+                        error!("Error serving TLS connection: {:?}", err);
                     }
-                });
-            }
-            Some(Err(err)) => {
-                if let Some(remote_addr) = err.peer_addr() {
-                    warn!("[client {remote_addr}] Error accepting connection: {}", err);
-                } else {
-                    warn!("Error accepting connection: {}", err);
+                }
+                Err(e) => {
+                    error!("Failed to accept a TLS connection: {:?}", e);
                 }
             }
-            None => break, // Exit the loop if None is returned
-        }
+        });
     }
-
-    debug!("HTTPS server loop ended");
-    Ok(())
 }
 
 pub async fn serve_http(addr: SocketAddr, router: Router) -> Result<(), AppError> {

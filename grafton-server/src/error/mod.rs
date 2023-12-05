@@ -2,9 +2,9 @@ use std::{io, sync::MutexGuard, sync::PoisonError};
 
 use {
     oauth2::{basic::BasicRequestTokenError, reqwest::AsyncHttpClientError},
-    rustls::Error as RustlsError,
     sqlx::migrate::MigrateError,
     thiserror::Error,
+    tokio_rustls::rustls::Error as RustlsError,
     url::ParseError,
 };
 
