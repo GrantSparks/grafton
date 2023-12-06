@@ -1,17 +1,21 @@
 use std::sync::Arc;
 
-use tracing::debug;
-
-use crate::{
-    app::middleware::session::create_session_layer, core::AxumRouter, model::AppContext,
-    util::Config, web::ProtectedApp, AppError,
+use {
+    tower_http::{services::ServeDir, services::ServeFile},
+    tracing::{debug, error},
 };
 
-use super::server::Server;
+use crate::{core::AxumRouter, model::AppContext, util::Config, web::ProtectedApp, AppError};
+
+use super::{
+    middleware::file::create_file_service, middleware::session::create_session_layer,
+    server::Server,
+};
 
 pub struct ServerBuilder {
     pub app_ctx: Arc<AppContext>,
     pub protected_router: Option<AxumRouter>,
+    pub fallback_service: Option<ServeDir<ServeFile>>,
 }
 
 impl ServerBuilder {
@@ -36,6 +40,7 @@ impl ServerBuilder {
         Ok(Self {
             app_ctx: context,
             protected_router: None,
+            fallback_service: None,
         })
     }
 
@@ -44,20 +49,42 @@ impl ServerBuilder {
         self
     }
 
-    pub async fn build(self) -> Result<Server, AppError> {
-        let app_ctx_clone = self.app_ctx.clone();
+    pub fn with_fallback_service(mut self, fallback_service: ServeDir<ServeFile>) -> Self {
+        self.fallback_service = Some(fallback_service);
+        self
+    }
 
-        let router = if let Some(router) = self.protected_router {
-            router.with_state(app_ctx_clone.clone())
+    /// Build the server. Use a default protected router and fallback service if none was provided.
+    pub async fn build(self) -> Result<Server, AppError> {
+        let app_ctx = self.app_ctx;
+
+        let protected_router = self
+            .protected_router
+            .map(|router| router.with_state(app_ctx.clone()));
+
+        let router = if let Some(router) = protected_router {
+            router
         } else {
             let session_layer = create_session_layer();
-            let app = ProtectedApp::new(app_ctx_clone.clone(), session_layer, None).await?;
-            app.create_auth_router().with_state(app_ctx_clone.clone())
+            let app = ProtectedApp::new(app_ctx.clone(), session_layer, None).await?;
+            app.create_auth_router().with_state(app_ctx.clone())
+        };
+
+        let file_service = if let Some(fallback_service) = self.fallback_service {
+            fallback_service
+        } else {
+            let fallback_file_path = app_ctx.config.website.web_root.clone();
+            let default_serve_file = ServeFile::new(fallback_file_path.clone());
+
+            create_file_service(app_ctx.clone()).unwrap_or_else(|e| {
+                error!("Failed to build file service: {:?}", e);
+                ServeDir::new(&fallback_file_path).fallback(default_serve_file)
+            })
         };
 
         Ok(Server {
-            router,
-            config: self.app_ctx.config.clone(),
+            router: router.fallback_service(file_service),
+            config: app_ctx.config.clone(),
         })
     }
 }

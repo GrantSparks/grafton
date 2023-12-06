@@ -60,6 +60,8 @@ pub struct Pages {
     pub public_error: String,
     #[derivative(Default(value = "\"login/github\".into()"))]
     pub public_login: String,
+    #[derivative(Default(value = "\"protected\".into()"))]
+    pub protected_home: String,
 }
 
 impl Pages {
@@ -71,6 +73,7 @@ impl Pages {
             public_home: self.join_paths(&normalized_base, &self.public_home),
             public_error: self.join_paths(&normalized_base, &self.public_error),
             public_login: self.join_paths(&normalized_base, &self.public_login),
+            protected_home: self.join_paths(&normalized_base, &self.protected_home),
         }
     }
 
@@ -332,12 +335,14 @@ mod tests {
             public_home: "home".to_string(),
             public_error: "/error".to_string(),
             public_login: "login".to_string(),
+            protected_home: "protected".to_string(),
         };
 
         let updated_pages = pages.with_root();
         assert_eq!(updated_pages.public_home, "/api/home");
         assert_eq!(updated_pages.public_error, "/api/error");
         assert_eq!(updated_pages.public_login, "/api/login");
+        assert_eq!(updated_pages.protected_home, "/api/protected");
         Ok(())
     }
 
@@ -348,12 +353,14 @@ mod tests {
             public_home: "home".to_string(),
             public_error: "error".to_string(),
             public_login: "login".to_string(),
+            protected_home: "protected".to_string(),
         };
 
         let updated_pages = pages.with_root();
         assert_eq!(updated_pages.public_home, "/api/home");
         assert_eq!(updated_pages.public_error, "/api/error");
         assert_eq!(updated_pages.public_login, "/api/login");
+        assert_eq!(updated_pages.protected_home, "/api/protected");
     }
 
     #[test]
@@ -363,12 +370,14 @@ mod tests {
             public_home: "".to_string(),
             public_error: "/".to_string(),
             public_login: "/".to_string(),
+            protected_home: "/".to_string(),
         };
 
         let updated_pages = pages.with_root();
         assert_eq!(updated_pages.public_home, "/");
         assert_eq!(updated_pages.public_error, "/");
         assert_eq!(updated_pages.public_login, "/");
+        assert_eq!(updated_pages.protected_home, "/");
     }
 
     fn create_website(
@@ -469,6 +478,7 @@ mod tests {
             public_home: "home".to_string(),
             public_error: "/error".to_string(),
             public_login: "login".to_string(),
+            protected_home: "protected".to_string(),
         };
 
         let new_pages = pages.with_root();
@@ -476,6 +486,7 @@ mod tests {
         assert_eq!(new_pages.public_home, "/api/home");
         assert_eq!(new_pages.public_error, "/api/error");
         assert_eq!(new_pages.public_login, "/api/login");
+        assert_eq!(new_pages.protected_home, "/api/protected");
     }
 
     #[test]

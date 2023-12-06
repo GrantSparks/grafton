@@ -8,6 +8,7 @@ run_mode = "dev"
 bind_ssl_config = { enabled = false }
 bind_ports = { http = 8080 }
 public_ports = { http = 8080 }
+web_root = "examples/chatgpt-plugin/public/www"
 
 [session]
 

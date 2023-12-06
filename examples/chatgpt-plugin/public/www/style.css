@@ -1,0 +1,40 @@
+:root {
+  --font-size: 1em;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  overflow: hidden;
+  background-color: white;
+}
+
+.container {
+  position: relative;
+  width: 100vw;
+  height: 0;
+  padding-bottom: 100%;
+  /* 1:1 aspect ratio */
+}
+
+h1 {
+  color: black;
+  font-size: 4em;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media screen and (max-width: 768px) {
+  h1 {
+    font-size: 3em;
+  }
+}
+
+@media screen and (max-width: 576px) {
+  h1 {
+    font-size: 2em;
+  }
+}

@@ -13,8 +13,8 @@ struct ProtectedTemplate<'a> {
     username: &'a str,
 }
 
-pub fn router() -> AxumRouter {
-    Router::new().route("/", get(self::get::protected))
+pub fn router(protected_home: String) -> AxumRouter {
+    Router::new().route(&protected_home, get(self::get::protected))
 }
 
 mod get {

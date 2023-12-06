@@ -106,6 +106,10 @@ version = "*"
 features = ["util"]
 version = "*"
 
+[dependencies.tower-http]
+features = ["fs"]
+version = "*"
+
 [dev-dependencies]
 tempfile = "3"
 toml = "*"

@@ -34,6 +34,7 @@ pub struct ProtectedApp {
     session_layer: SessionManagerLayer<MemoryStore>,
     login_url: String,
     protected_router: Option<AxumRouter>,
+    protected_route: String,
 }
 
 impl ProtectedApp {
@@ -101,6 +102,13 @@ impl ProtectedApp {
                 .public_login
                 .clone(),
             protected_router,
+            protected_route: app_ctx
+                .config
+                .website
+                .pages
+                .with_root()
+                .protected_home
+                .clone(),
         })
     }
 
@@ -140,8 +148,11 @@ impl ProtectedApp {
                 router
             }
             None => {
-                debug!("No protected_router provided, using default protected::router()");
-                protected::router()
+                debug!(
+                    "No protected_router provided, using default protected::router() at route: {}",
+                    self.protected_route
+                );
+                protected::router(self.protected_route)
             }
         };
 
