@@ -1,6 +1,6 @@
 <html>
   <head>
-    <title>OAuth2 Login</title>
+    <title>Grafton Machine Shed</title>
   </head>
 
   <body>
@@ -9,7 +9,7 @@
     {% endif %}
 
     <form method="post">
-      <input type="submit" value="GitHub Login" />
+      <input type="submit" value="{{provider_name}} Login" />
 
       {% if let Some(next) = next %}
       <input type="hidden" name="next" value="{{next}}" />

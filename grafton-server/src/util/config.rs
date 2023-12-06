@@ -226,6 +226,7 @@ pub struct Ports {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ClientConfig {
+    pub display_name: String,
     pub client_id: ClientId,
     pub client_secret: ClientSecret,
     pub auth_uri: String,

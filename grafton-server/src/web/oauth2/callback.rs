@@ -18,7 +18,12 @@ pub fn router() -> AxumRouter {
 }
 
 mod get {
+    use std::sync::Arc;
+
+    use axum::extract::State;
+
     use crate::{
+        model::AppContext,
         web::{
             oauth2::{
                 login::{LoginTemplate, NEXT_URL_KEY},
@@ -39,6 +44,7 @@ mod get {
             code,
             state: new_state,
         }): Query<AuthzResp>,
+        State(app_ctx): State<Arc<AppContext>>,
     ) -> impl IntoResponse {
         debug!("OAuth callback for provider: {}", provider);
 
@@ -51,7 +57,7 @@ mod get {
             code,
             old_state,
             new_state,
-            provider,
+            provider: provider.clone(),
         };
 
         let user = match auth_session.authenticate(creds).await {
@@ -61,11 +67,21 @@ mod get {
             }
             Ok(None) => {
                 warn!("Invalid CSRF state, authentication failed");
+
+                let provider_name = match app_ctx.config.oauth_clients.get(&provider) {
+                    Some(client) => client.display_name.clone(),
+                    None => {
+                        error!("Provider not found: {}", provider);
+                        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                    }
+                };
+
                 return (
                     StatusCode::UNAUTHORIZED,
                     LoginTemplate {
                         message: Some("Invalid CSRF state.".to_string()),
                         next: None,
+                        provider_name,
                     },
                 )
                     .into_response();
