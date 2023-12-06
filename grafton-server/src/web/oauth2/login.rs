@@ -7,6 +7,7 @@ use {
         routing::{get, post},
     },
     serde::Deserialize,
+    tracing::error,
 };
 
 use crate::core::AxumRouter;
@@ -40,7 +41,7 @@ mod post {
 
     use crate::{web::oauth2::CSRF_STATE_KEY, AuthSession};
 
-    use super::{IntoResponse, NextUrl, Path, StatusCode, NEXT_URL_KEY};
+    use super::{error, IntoResponse, NextUrl, Path, StatusCode, NEXT_URL_KEY};
 
     /// Redirects to the OAuth2 provider's authorization URL.
     pub async fn login(
@@ -48,19 +49,24 @@ mod post {
         session: Session,
         Path(provider): Path<String>,
         Form(NextUrl { next }): Form<NextUrl>,
-    ) -> impl IntoResponse {
+    ) -> Result<impl IntoResponse, impl IntoResponse> {
         match auth_session.backend.authorize_url(provider.clone()) {
             Ok((url, token)) => {
-                session
-                    .insert(CSRF_STATE_KEY, token.secret())
-                    .expect("Serialization should not fail.");
-                session
-                    .insert(NEXT_URL_KEY, next)
-                    .expect("Serialization should not fail.");
+                if let Err(e) = session.insert(CSRF_STATE_KEY, token.secret()) {
+                    error!("Error serializing CSRF token: {:?}", e);
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR.into_response());
+                }
+                if let Err(e) = session.insert(NEXT_URL_KEY, next) {
+                    error!("Error serializing next URL: {:?}", e);
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR.into_response());
+                }
 
-                Redirect::to(url.as_str()).into_response()
+                Ok(Redirect::to(url.as_str()).into_response())
             }
-            Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+            Err(e) => {
+                error!("Error generating authorization URL: {:?}", e);
+                Err(StatusCode::INTERNAL_SERVER_ERROR.into_response())
+            }
         }
     }
 }
@@ -69,14 +75,13 @@ mod get {
 
     use std::sync::Arc;
 
-    use axum::{debug_handler, extract::State};
+    use axum::extract::State;
     use axum_login::axum::extract::Query;
 
     use crate::model::AppContext;
 
     use super::{IntoResponse, LoginTemplate, NextUrl, Path, StatusCode};
 
-    #[debug_handler]
     pub async fn login(
         Query(NextUrl { next }): Query<NextUrl>,
         Path(provider): Path<String>,

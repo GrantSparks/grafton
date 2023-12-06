@@ -31,7 +31,7 @@ mod get {
             },
             Credentials,
         },
-        AuthSession,
+        AppError, AuthSession,
     };
 
     use super::*;
@@ -45,13 +45,13 @@ mod get {
             state: new_state,
         }): Query<AuthzResp>,
         State(app_ctx): State<Arc<AppContext>>,
-    ) -> impl IntoResponse {
+    ) -> Result<impl IntoResponse, impl IntoResponse> {
         debug!("OAuth callback for provider: {}", provider);
 
-        let Ok(Some(old_state)) = session.get(CSRF_STATE_KEY) else {
-            warn!("CSRF state missing or invalid");
-            return StatusCode::BAD_REQUEST.into_response();
-        };
+        let old_state = session
+            .get(CSRF_STATE_KEY)
+            .map_err(|_| AppError::SessionStateError("Failed to retrieve CSRF state".to_string()))?
+            .ok_or(AppError::MissingCSRFState)?;
 
         let creds = Credentials {
             code,
@@ -67,16 +67,14 @@ mod get {
             }
             Ok(None) => {
                 warn!("Invalid CSRF state, authentication failed");
+                let provider_name = app_ctx
+                    .config
+                    .oauth_clients
+                    .get(&provider)
+                    .map(|client| client.display_name.clone())
+                    .ok_or_else(|| AppError::ProviderNotFoundError(provider.clone()))?;
 
-                let provider_name = match app_ctx.config.oauth_clients.get(&provider) {
-                    Some(client) => client.display_name.clone(),
-                    None => {
-                        error!("Provider not found: {}", provider);
-                        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-                    }
-                };
-
-                return (
+                return Ok((
                     StatusCode::UNAUTHORIZED,
                     LoginTemplate {
                         message: Some("Invalid CSRF state.".to_string()),
@@ -84,25 +82,30 @@ mod get {
                         provider_name,
                     },
                 )
-                    .into_response();
+                    .into_response());
             }
             Err(e) => {
                 error!("Internal error during authentication: {:?}", e);
-                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                return Err(AppError::AuthenticationError(e.to_string()));
             }
         };
 
-        if auth_session.login(&user).await.is_err() {
-            error!("Error logging in the user");
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        if let Err(e) = auth_session.login(&user).await {
+            error!("Error logging in the user: {:?}", e);
+            return Err(AppError::LoginError(
+                "Error logging in the user".to_string(),
+            ));
         }
 
-        if let Ok(Some(next)) = session.remove::<String>(NEXT_URL_KEY) {
-            debug!("Redirecting to next URL: {}", next);
-            Redirect::to(&next).into_response()
-        } else {
-            debug!("Redirecting to home page");
-            Redirect::to("/").into_response()
+        match session.remove::<String>(NEXT_URL_KEY) {
+            Ok(Some(next)) if !next.is_empty() => Ok(Redirect::to(&next).into_response()),
+            Ok(Some(_)) | Ok(None) => Ok(Redirect::to("/").into_response()),
+            Err(e) => {
+                error!("Session error: {:?}", e);
+                Err(AppError::SessionError(
+                    "Failed to retrieve next URL from session".to_string(),
+                ))
+            }
         }
     }
 }
