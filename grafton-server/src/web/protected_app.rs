@@ -2,9 +2,11 @@ use std::{collections::HashMap, sync::Arc};
 
 use {
     askama_axum::IntoResponse,
-    axum::{middleware::Next, response::Redirect},
     axum_login::{
-        axum::{error_handling::HandleErrorLayer, http::StatusCode, middleware::from_fn, BoxError},
+        axum::{
+            error_handling::HandleErrorLayer, http::StatusCode, middleware::from_fn,
+            middleware::Next, response::Redirect, BoxError,
+        },
         tower_sessions::{MemoryStore, SessionManagerLayer},
         urlencoding, AuthManagerLayerBuilder,
     },
