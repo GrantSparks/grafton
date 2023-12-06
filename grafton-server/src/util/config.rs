@@ -485,6 +485,7 @@ mod tests {
             "run_mode": "test",
             "oauth_clients": {
                 "github": {
+                    "display_name": "GitHub",
                     "client_id": "github_id",
                     "client_secret": "github_secret",
                     "redirect_uri": "http://localhost/redirect",
@@ -516,6 +517,7 @@ mod tests {
             "run_mode": "test",
             "oauth_clients": {
                 "github": {
+                    "display_name": "GitHub",
                     "client_id": "github_id",
                     "client_secret": "github_secret",
                     "redirect_uri": "http://localhost/github/redirect",
@@ -523,6 +525,7 @@ mod tests {
                     "token_uri": "http://localhost/github/token"
                 },
                 "google": {
+                    "display_name": "Google",
                     "client_id": "google_id",
                     "client_secret": "google_secret",
                     "redirect_uri": "http://localhost/google/redirect",
@@ -605,8 +608,8 @@ mod tests {
             [pages]
     
             [oauth_clients]
-            google = { client_id = "YOUR GOOGLE CLIENT ID", client_secret = "YOUR GOOGLE CLIENT SECRET", auth_uri = "", token_uri = "" }
-            github = { client_id = "xxx", client_secret = "xxx", auth_uri = "https://github.com/login/oauth/authorize", token_uri = "https://github.com/login/oauth/access_token" }
+            google = { display_name = "Google", client_id = "YOUR GOOGLE CLIENT ID", client_secret = "YOUR GOOGLE CLIENT SECRET", auth_uri = "https://accounts.google.com/o/oauth2/auth", token_uri = "https://oauth2.googleapis.com/token" }
+            github = { display_name = "GitHub", client_id = "xxx", client_secret = "xxx", auth_uri = "https://github.com/login/oauth/authorize", token_uri = "https://github.com/login/oauth/access_token" }
         "#;
 
         let local_toml_content = r#"
