@@ -3,7 +3,6 @@ use {
     askama_axum::IntoResponse,
     axum_login::axum::{
         extract::Path,
-        http::StatusCode,
         routing::{get, post},
     },
     serde::Deserialize,
@@ -39,9 +38,9 @@ mod post {
         tower_sessions::Session,
     };
 
-    use crate::{web::oauth2::CSRF_STATE_KEY, AuthSession};
+    use crate::{web::oauth2::CSRF_STATE_KEY, AppError, AuthSession};
 
-    use super::{error, IntoResponse, NextUrl, Path, StatusCode, NEXT_URL_KEY};
+    use super::{error, IntoResponse, NextUrl, Path, NEXT_URL_KEY};
 
     /// Redirects to the OAuth2 provider's authorization URL.
     pub async fn login(
@@ -49,23 +48,23 @@ mod post {
         session: Session,
         Path(provider): Path<String>,
         Form(NextUrl { next }): Form<NextUrl>,
-    ) -> Result<impl IntoResponse, impl IntoResponse> {
+    ) -> Result<impl IntoResponse, AppError> {
         match auth_session.backend.authorize_url(provider.clone()) {
             Ok((url, token)) => {
                 if let Err(e) = session.insert(CSRF_STATE_KEY, token.secret()) {
                     error!("Error serializing CSRF token: {:?}", e);
-                    return Err(StatusCode::INTERNAL_SERVER_ERROR.into_response());
+                    return Err(AppError::SerializationError(e.to_string()));
                 }
                 if let Err(e) = session.insert(NEXT_URL_KEY, next) {
                     error!("Error serializing next URL: {:?}", e);
-                    return Err(StatusCode::INTERNAL_SERVER_ERROR.into_response());
+                    return Err(AppError::SerializationError(e.to_string()));
                 }
 
                 Ok(Redirect::to(url.as_str()).into_response())
             }
             Err(e) => {
                 error!("Error generating authorization URL: {:?}", e);
-                Err(StatusCode::INTERNAL_SERVER_ERROR.into_response())
+                Err(AppError::AuthorizationUrlError(e.to_string()))
             }
         }
     }
@@ -75,12 +74,11 @@ mod get {
 
     use std::sync::Arc;
 
-    use axum::extract::State;
-    use axum_login::axum::extract::Query;
+    use axum_login::axum::extract::{Query, State};
 
-    use crate::model::AppContext;
+    use crate::{model::AppContext, AppError};
 
-    use super::{IntoResponse, LoginTemplate, NextUrl, Path, StatusCode};
+    use super::{IntoResponse, LoginTemplate, NextUrl, Path};
 
     pub async fn login(
         Query(NextUrl { next }): Query<NextUrl>,
@@ -96,7 +94,7 @@ mod get {
                     provider_name: provider_name.clone(),
                 })
             }
-            None => Err(StatusCode::INTERNAL_SERVER_ERROR.into_response()),
+            None => Err(AppError::ProviderNotFoundError(provider)),
         }
     }
 }

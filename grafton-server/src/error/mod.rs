@@ -145,6 +145,15 @@ pub enum AppError {
 
     #[error("Session error: {0}")]
     SessionError(String),
+
+    #[error("Failed to serialize session data: {0}")]
+    SerializationError(String),
+
+    #[error("Failed to generate authorization URL: {0}")]
+    AuthorizationUrlError(String),
+
+    #[error("Error rendering template: {0}")]
+    TemplateRenderingError(String),
 }
 
 #[cfg(feature = "rbac")]
@@ -157,39 +166,30 @@ impl From<PoisonError<MutexGuard<'_, Oso>>> for AppError {
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, error_message) = match &self {
-            // Specific status codes for certain errors
-            AppError::IoError(_) => (
+            AppError::GenericError(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg.clone()),
+            AppError::GeneralError(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "I/O Error occurred".to_string(),
+                "General error occurred".to_string(),
             ),
-            AppError::Sqlx(_) => (
+            AppError::SerializationError(msg) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "Database Error".to_string(),
+                format!("Failed to serialize session data: {}", msg),
             ),
-            AppError::PathError(_) => (StatusCode::BAD_REQUEST, "Invalid Path".to_string()),
-            AppError::InvalidAuthUrl(_) | AppError::InvalidTokenUrl(_) => {
-                (StatusCode::BAD_REQUEST, "Invalid URL".to_string())
-            }
-            AppError::DatabaseConnectionError(_) => (
+            AppError::AuthorizationUrlError(msg) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "Database Connection Error".to_string(),
+                format!("Failed to generate authorization URL: {}", msg),
             ),
-            AppError::InvalidHttpHeaderValue(_) => (
-                StatusCode::BAD_REQUEST,
-                "Invalid HTTP Header Value".to_string(),
+            AppError::ProviderNotFoundError(msg) => (
+                StatusCode::NOT_FOUND,
+                format!("OAuth provider not found: {}", msg),
             ),
-            AppError::AuthenticationError(_) => {
-                (StatusCode::UNAUTHORIZED, "Authentication Error".to_string())
-            }
-            AppError::MissingCSRFState | AppError::InvalidCSRFState => (
-                StatusCode::BAD_REQUEST,
-                "CSRF Validation Failed".to_string(),
+            AppError::TemplateRenderingError(msg) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Error rendering template: {}", msg),
             ),
-
-            // Default to internal server error for all other cases
             _ => (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "Internal Server Error".to_string(),
+                "An unexpected error occurred".to_string(),
             ),
         };
 
