@@ -4,16 +4,16 @@ use {
     askama_axum::IntoResponse,
     axum_login::{
         axum::{
-            error_handling::HandleErrorLayer, http::StatusCode, middleware::from_fn,
-            middleware::Next, response::Redirect, BoxError,
+            error_handling::HandleErrorLayer, extract::OriginalUri, http::StatusCode,
+            middleware::from_fn, middleware::Next, response::Redirect, BoxError,
         },
         tower_sessions::{MemoryStore, SessionManagerLayer},
-        urlencoding, AuthManagerLayerBuilder,
+        url_with_redirect_query, AuthManagerLayerBuilder,
     },
     oauth2::{basic::BasicClient, AuthUrl, TokenUrl},
     sqlx::SqlitePool,
     tower::ServiceBuilder,
-    tracing::{debug, error, info, warn},
+    tracing::{debug, error, info},
 };
 
 use crate::{
@@ -126,20 +126,30 @@ impl ProtectedApp {
             .layer(AuthManagerLayerBuilder::new(backend, self.session_layer).build());
 
         let login_url = Arc::new(self.login_url);
-        let auth_middleware = from_fn(move |auth_session: AuthSession, req, next: Next| {
-            let login_url_clone = login_url.clone();
-            async move {
-                if auth_session.user.is_some() {
-                    next.run(req).await
-                } else {
-                    warn!("Unauthorized access attempt, redirecting to login");
-                    let uri = req.uri().to_string();
-                    let next = urlencoding::encode(&uri);
-                    let redirect_url = format!("{}?next={}", login_url_clone, next);
-                    Redirect::temporary(&redirect_url).into_response()
+        let auth_middleware = from_fn(
+            move |auth_session: AuthSession,
+                  OriginalUri(original_uri): OriginalUri,
+                  req,
+                  next: Next| {
+                let login_url_clone = login_url.clone();
+                async move {
+                    if auth_session.user.is_some() {
+                        next.run(req).await
+                    } else {
+                        match url_with_redirect_query(&login_url_clone, "next", original_uri) {
+                            Ok(login_url) => {
+                                Redirect::temporary(&login_url.to_string()).into_response()
+                            }
+
+                            Err(err) => {
+                                error!(err = %err);
+                                StatusCode::INTERNAL_SERVER_ERROR.into_response()
+                            }
+                        }
+                    }
                 }
-            }
-        });
+            },
+        );
         info!("Auth middleware created");
 
         let router = match self.protected_router {

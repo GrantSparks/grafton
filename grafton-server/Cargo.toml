@@ -15,9 +15,10 @@ include = [
     "LICENSE",
     "README.md",
     "build.rs",
-    "src/**/*",
+    "examples/**/*",
     "migrations/**/*",
     "templates/**/*",
+    "src/**/*",
 ]
 
 [profile.dev.build-override]
@@ -54,7 +55,7 @@ version = "*"
 features = ["macros"] # Hack to enable macros in axum-login crate dependency
 
 [dependencies.axum-login]
-version = "0.10.2" # Pin version until next update
+version = ">=0.11.2"
 
 [dependencies.reqwest]
 features = ["json"]

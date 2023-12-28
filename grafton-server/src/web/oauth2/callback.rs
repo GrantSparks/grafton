@@ -50,6 +50,7 @@ mod get {
 
         let old_state = session
             .get(CSRF_STATE_KEY)
+            .await
             .map_err(|_| AppError::SessionStateError("Failed to retrieve CSRF state".to_string()))?
             .ok_or(AppError::MissingCSRFState)?;
 
@@ -97,7 +98,7 @@ mod get {
             ));
         }
 
-        match session.remove::<String>(NEXT_URL_KEY) {
+        match session.remove::<String>(NEXT_URL_KEY).await {
             Ok(Some(next)) if !next.is_empty() => Ok(Redirect::to(&next).into_response()),
             Ok(Some(_)) | Ok(None) => Ok(Redirect::to("/").into_response()),
             Err(e) => {

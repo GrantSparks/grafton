@@ -37,6 +37,7 @@ mod post {
         axum::{response::Redirect, Form},
         tower_sessions::Session,
     };
+    use tracing::warn;
 
     use crate::{web::oauth2::CSRF_STATE_KEY, AppError, AuthSession};
 
@@ -51,11 +52,17 @@ mod post {
     ) -> Result<impl IntoResponse, AppError> {
         match auth_session.backend.authorize_url(provider.clone()) {
             Ok((url, token)) => {
-                if let Err(e) = session.insert(CSRF_STATE_KEY, token.secret()) {
+                if let Err(e) = session.insert(CSRF_STATE_KEY, token.secret()).await {
                     error!("Error serializing CSRF token: {:?}", e);
                     return Err(AppError::SerializationError(e.to_string()));
                 }
-                if let Err(e) = session.insert(NEXT_URL_KEY, next) {
+
+                // Check if 'next' is None or an empty String
+                if next.as_ref().map(|s| s.is_empty()).unwrap_or(false) {
+                    warn!("NEXT_URL_KEY is empty or null");
+                }
+
+                if let Err(e) = session.insert(NEXT_URL_KEY, next).await {
                     error!("Error serializing next URL: {:?}", e);
                     return Err(AppError::SerializationError(e.to_string()));
                 }
