@@ -55,7 +55,7 @@ version = "*"
 features = ["macros"] # Hack to enable macros in axum-login crate dependency
 
 [dependencies.axum-login]
-version = ">=0.11.2"
+version = "0.11.3" # TODO: Update to 0.12.0
 
 [dependencies.reqwest]
 features = ["json"]
