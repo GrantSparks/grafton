@@ -4,15 +4,14 @@ use {
     askama_axum::IntoResponse,
     axum_login::{
         axum::{
-            error_handling::HandleErrorLayer, extract::OriginalUri, http::StatusCode,
-            middleware::from_fn, middleware::Next, response::Redirect, BoxError,
+            extract::OriginalUri, http::StatusCode, middleware::from_fn, middleware::Next,
+            response::Redirect,
         },
         tower_sessions::{MemoryStore, SessionManagerLayer},
         url_with_redirect_query, AuthManagerLayerBuilder,
     },
     oauth2::{basic::BasicClient, AuthUrl, TokenUrl},
     sqlx::SqlitePool,
-    tower::ServiceBuilder,
     tracing::{debug, error, info},
 };
 
@@ -119,11 +118,7 @@ impl ProtectedApp {
         // This combines the session layer with our backend to establish the auth
         // service which will provide the auth session as a request extension.
         let backend = Backend::new(self.db.clone(), self.oauth_clients.clone());
-        let auth_service = ServiceBuilder::new()
-            .layer(HandleErrorLayer::new(|_: BoxError| async {
-                StatusCode::BAD_REQUEST
-            }))
-            .layer(AuthManagerLayerBuilder::new(backend, self.session_layer).build());
+        let auth_layer = AuthManagerLayerBuilder::new(backend, self.session_layer).build();
 
         let login_url = Arc::new(self.login_url);
         let auth_middleware = from_fn(
@@ -171,6 +166,6 @@ impl ProtectedApp {
             .merge(create_login_router())
             .merge(create_callback_router())
             .merge(create_logout_router())
-            .layer(auth_service)
+            .layer(auth_layer)
     }
 }
