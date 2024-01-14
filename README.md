@@ -7,7 +7,7 @@ The Grafton Machine Shed API Server is a batteries-included platform written in 
 The Grafton Machine Shed is a work in progress.  **This platform will not be stable enough to use in third-party projects until a future release.**
 
 We are currently working on the following features:
-- Basic http server (in progress)
+- Basic http server (complete)
 - Multi-provider oauth2 login (in progress)
 - Role Based Access Control (in progress)
 

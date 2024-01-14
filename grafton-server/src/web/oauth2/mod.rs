@@ -25,4 +25,5 @@ pub(crate) struct Credentials {
     pub old_state: CsrfToken,
     pub new_state: CsrfToken,
     pub provider: String,
+    pub userinfo_uri: String,
 }

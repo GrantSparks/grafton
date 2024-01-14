@@ -91,53 +91,37 @@ impl AuthnBackend for Backend {
                 HeaderValue::from_str(&format!("Bearer {}", token_res.access_token().secret()))
                     .map_err(AppError::InvalidHttpHeaderValue)?;
 
+            let response = reqwest::Client::new()
+                .get(creds.userinfo_uri)
+                .header(user_agent_header, user_agent_value)
+                .header(authorization_header, authorization_value)
+                .send()
+                .await
+                .map_err(Self::Error::Reqwest)?;
+
+            let user_info = response
+                .json::<UserInfo>()
+                .await
+                .map_err(Self::Error::Reqwest)?;
+
             let login_id: String;
             match creds.provider.as_str() {
-                "github" => {
-                    let response = reqwest::Client::new()
-                        .get("https://api.github.com/user")
-                        .header(user_agent_header, user_agent_value)
-                        .header(authorization_header, authorization_value)
-                        .send()
-                        .await
-                        .map_err(Self::Error::Reqwest)?;
-
-                    let user_info = response
-                        .json::<UserInfo>()
-                        .await
-                        .map_err(Self::Error::Reqwest)?;
-
-                    match user_info.login {
-                        Some(login) => login_id = login,
-                        None => {
-                            return Err(AppError::OAuth2Generic(
-                                "Login not found in response from GitHub.".to_string(),
-                            ))
-                        }
+                "github" => match user_info.login {
+                    Some(login) => login_id = login,
+                    None => {
+                        return Err(AppError::OAuth2Generic(
+                            "Login not found in response from GitHub.".to_string(),
+                        ))
                     }
-                }
-                "google" => {
-                    let response = reqwest::Client::new()
-                        .get("https://www.googleapis.com/oauth2/v3/userinfo")
-                        .header(authorization_header, authorization_value)
-                        .send()
-                        .await
-                        .map_err(Self::Error::Reqwest)?;
-
-                    let user_info = response
-                        .json::<UserInfo>()
-                        .await
-                        .map_err(Self::Error::Reqwest)?;
-
-                    match user_info.email {
-                        Some(email) => login_id = email,
-                        None => {
-                            return Err(AppError::OAuth2Generic(
-                                "Email not found in response from Google.".to_string(),
-                            ))
-                        }
+                },
+                "google" => match user_info.email {
+                    Some(email) => login_id = email,
+                    None => {
+                        return Err(AppError::OAuth2Generic(
+                            "Email not found in response from Google.".to_string(),
+                        ))
                     }
-                }
+                },
                 _ => {
                     return Err(AppError::OAuth2(BasicRequestTokenError::Other(format!(
                         "Unsupported provider `{}`.",
