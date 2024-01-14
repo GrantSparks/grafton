@@ -82,7 +82,7 @@ mod get {
 
                         let next = match session.get::<String>(NEXT_URL_KEY).await {
                             Ok(Some(next)) => next,
-                            Ok(None) => "/".to_string(),
+                            Ok(None) => app_ctx.config.website.pages.with_root().public_home,
                             Err(e) => {
                                 error!("Session error: {:?}", e);
                                 return Err(AppError::SessionError(
@@ -116,7 +116,10 @@ mod get {
 
                 match session.remove::<String>(NEXT_URL_KEY).await {
                     Ok(Some(next)) if !next.is_empty() => Ok(Redirect::to(&next).into_response()),
-                    Ok(Some(_)) | Ok(None) => Ok(Redirect::to("/").into_response()),
+                    Ok(Some(_)) | Ok(None) => Ok(Redirect::to(
+                        &app_ctx.config.website.pages.with_root().public_home,
+                    )
+                    .into_response()),
                     Err(e) => {
                         error!("Session error: {:?}", e);
                         Err(AppError::SessionError(
