@@ -234,7 +234,7 @@ pub struct ClientConfig {
     pub client_secret: ClientSecret,
     pub auth_uri: String,
     pub token_uri: String,
-    #[serde(flatten)]
+    #[serde(default)]
     pub extra: Map<String, Value>,
 }
 
@@ -533,7 +533,10 @@ mod tests {
                     "client_secret": "github_secret",
                     "redirect_uri": "http://localhost/github/redirect",
                     "auth_uri": "http://localhost/github/callback",
-                    "token_uri": "http://localhost/github/token"
+                    "token_uri": "http://localhost/github/token",
+                    "extra": { 
+                        "userinfo_uri": "https://api.github.com/user"
+                    }
                 },
                 "google": {
                     "display_name": "Google",
@@ -541,7 +544,10 @@ mod tests {
                     "client_secret": "google_secret",
                     "redirect_uri": "http://localhost/google/redirect",
                     "auth_uri": "http://localhost/google/callback",
-                    "token_uri": "http://localhost/google/token"
+                    "token_uri": "http://localhost/google/token",
+                    "extra": { 
+                        "userinfo_uri": "https://www.googleapis.com/oauth2/v3/userinfo" 
+                    }
                 }
             }
         }"#;
@@ -554,6 +560,18 @@ mod tests {
         assert_eq!(
             config.oauth_clients.get("google").unwrap().token_uri,
             "http://localhost/google/token"
+        );
+
+        let userinfo_uri = config
+            .oauth_clients
+            .get("google")
+            .unwrap()
+            .extra
+            .get("userinfo_uri")
+            .unwrap();
+        assert_eq!(
+            userinfo_uri,
+            "https://www.googleapis.com/oauth2/v3/userinfo"
         );
     }
 

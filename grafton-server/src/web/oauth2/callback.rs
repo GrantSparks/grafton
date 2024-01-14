@@ -55,80 +55,74 @@ mod get {
             .ok_or(AppError::MissingCSRFState)?;
 
         if let Some(oauth_client) = app_ctx.config.oauth_clients.get(&provider) {
-            if let Some(extras) = oauth_client.extra.get("extra") {
-                if let Some(userinfo_uri) = extras.get("userinfo_uri") {
-                    let userinfo_uri = userinfo_uri.as_str().unwrap().to_string();
-                    let creds = Credentials {
-                        code,
-                        old_state,
-                        new_state,
-                        provider: provider.clone(),
-                        userinfo_uri,
-                    };
+            if let Some(userinfo_uri) = oauth_client.extra.get("userinfo_uri") {
+                let userinfo_uri = userinfo_uri.as_str().unwrap().to_string();
+                let creds = Credentials {
+                    code,
+                    old_state,
+                    new_state,
+                    provider,
+                    userinfo_uri,
+                };
 
-                    let user = match auth_session.authenticate(creds).await {
-                        Ok(Some(user)) => {
-                            debug!("User authenticated successfully");
-                            user
-                        }
-                        Ok(None) => {
-                            warn!("Invalid CSRF state, authentication failed");
-
-                            let providers = app_ctx
-                                .config
-                                .oauth_clients
-                                .values()
-                                .map(|client| client.display_name.clone())
-                                .collect();
-
-                            let next = match session.get::<String>(NEXT_URL_KEY).await {
-                                Ok(Some(next)) => next,
-                                Ok(None) => "/".to_string(),
-                                Err(e) => {
-                                    error!("Session error: {:?}", e);
-                                    return Err(AppError::SessionError(
-                                        "Failed to retrieve next URL from session".to_string(),
-                                    ));
-                                }
-                            };
-
-                            return Ok((
-                                StatusCode::UNAUTHORIZED,
-                                ProviderTemplate {
-                                    message: Some("Invalid CSRF state.".to_string()),
-                                    next,
-                                    providers,
-                                },
-                            )
-                                .into_response());
-                        }
-                        Err(e) => {
-                            error!("Internal error during authentication: {:?}", e);
-                            return Err(AppError::AuthenticationError(e.to_string()));
-                        }
-                    };
-
-                    if let Err(e) = auth_session.login(&user).await {
-                        error!("Error logging in the user: {:?}", e);
-                        return Err(AppError::LoginError(
-                            "Error logging in the user".to_string(),
-                        ));
+                let user = match auth_session.authenticate(creds).await {
+                    Ok(Some(user)) => {
+                        debug!("User authenticated successfully");
+                        user
                     }
+                    Ok(None) => {
+                        warn!("Invalid CSRF state, authentication failed");
 
-                    match session.remove::<String>(NEXT_URL_KEY).await {
-                        Ok(Some(next)) if !next.is_empty() => {
-                            Ok(Redirect::to(&next).into_response())
-                        }
-                        Ok(Some(_)) | Ok(None) => Ok(Redirect::to("/").into_response()),
-                        Err(e) => {
-                            error!("Session error: {:?}", e);
-                            Err(AppError::SessionError(
-                                "Failed to retrieve next URL from session".to_string(),
-                            ))
-                        }
+                        let providers = app_ctx
+                            .config
+                            .oauth_clients
+                            .values()
+                            .map(|client| client.display_name.clone())
+                            .collect();
+
+                        let next = match session.get::<String>(NEXT_URL_KEY).await {
+                            Ok(Some(next)) => next,
+                            Ok(None) => "/".to_string(),
+                            Err(e) => {
+                                error!("Session error: {:?}", e);
+                                return Err(AppError::SessionError(
+                                    "Failed to retrieve next URL from session".to_string(),
+                                ));
+                            }
+                        };
+
+                        return Ok((
+                            StatusCode::UNAUTHORIZED,
+                            ProviderTemplate {
+                                message: Some("Invalid CSRF state.".to_string()),
+                                next,
+                                providers,
+                            },
+                        )
+                            .into_response());
                     }
-                } else {
-                    Err(AppError::ClientConfigNotFound("extra".to_string()))
+                    Err(e) => {
+                        error!("Internal error during authentication: {:?}", e);
+                        return Err(AppError::AuthenticationError(e.to_string()));
+                    }
+                };
+
+                if let Err(e) = auth_session.login(&user).await {
+                    error!("Error logging in the user: {:?}", e);
+                    return Err(AppError::LoginError(
+                        "Error logging in the user".to_string(),
+                    ));
+                }
+
+                match session.remove::<String>(NEXT_URL_KEY).await {
+                    Ok(Some(next)) if !next.is_empty() => Ok(Redirect::to(&next).into_response()),
+                    Ok(Some(_)) | Ok(None) => Ok(Redirect::to("/").into_response()),
+                    Err(e) => {
+                        error!("Session error: {:?}", e);
+                        Err(AppError::SessionError(
+                            "Failed to retrieve next URL from session".to_string(),
+                        ))
+                    }
                 }
             } else {
                 Err(AppError::ClientConfigNotFound("userinfo_uri".to_string()))
