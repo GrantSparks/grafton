@@ -10,7 +10,7 @@ use {
         tower_sessions::{MemoryStore, SessionManagerLayer},
         url_with_redirect_query, AuthManagerLayerBuilder,
     },
-    oauth2::{basic::BasicClient, AuthUrl, TokenUrl},
+    oauth2::{basic::BasicClient, AuthUrl, RedirectUrl, TokenUrl},
     sqlx::SqlitePool,
     tracing::{debug, error, info},
 };
@@ -64,8 +64,20 @@ impl ProtectedApp {
                 }
             })?;
 
+            let normalised_url = app_ctx
+                .config
+                .website
+                .format_public_server_url(&format!("/oauth/{}/callback", client_name));
+
+            let redirect_url = RedirectUrl::new(normalised_url).map_err(|e| {
+                error!("Error parsing redirect URL: {:?}", e);
+                AppError::SerializationError(e.to_string())
+            })?;
+
             let client =
-                BasicClient::new(client_id, Some(client_secret), auth_url, Some(token_url));
+                BasicClient::new(client_id, Some(client_secret), auth_url, Some(token_url))
+                    .set_redirect_uri(redirect_url);
+
             oauth_clients.insert(client_name.clone(), client);
             debug!("OAuth client configured: {}", client_name);
         }

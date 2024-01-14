@@ -75,6 +75,9 @@ pub enum AppError {
     #[error("OAuth2 error: {0}")]
     OAuth2(#[from] BasicRequestTokenError<AsyncHttpClientError>),
 
+    #[error("OAuth2 generic error: {0}")]
+    OAuth2Generic(String),
+
     #[error("Error formatting URL with protocol '{protocol}', hostname '{hostname}', port {port}, cause {cause}, inner {inner}")]
     UrlFormatError {
         protocol: String,

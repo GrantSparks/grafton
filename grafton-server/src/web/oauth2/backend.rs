@@ -6,7 +6,7 @@ use {
         basic::{BasicClient, BasicRequestTokenError},
         reqwest::async_http_client,
         url::Url,
-        AuthorizationCode, CsrfToken, TokenResponse,
+        AuthorizationCode, CsrfToken, Scope, TokenResponse,
     },
     reqwest::header::{HeaderName as ReqwestHeaderName, HeaderValue},
     serde::Deserialize,
@@ -17,9 +17,12 @@ use crate::{model::User, AppError};
 
 use super::Credentials;
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 struct UserInfo {
-    login: String,
+    login: Option<String>,
+    email: Option<String>,
+    username: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -36,7 +39,21 @@ impl Backend {
     pub fn authorize_url(&self, provider: String) -> Result<(Url, CsrfToken), AppError> {
         if let Some(oauth_client) = self.oauth_clients.get(&provider) {
             let csrf_token = CsrfToken::new_random();
-            Ok(oauth_client.authorize_url(|| csrf_token.clone()).url())
+
+            let scopes: Vec<Scope> = vec![
+                "openid".to_string(),
+                "profile".to_string(),
+                "email".to_string(),
+            ]
+            .into_iter()
+            .map(Scope::new)
+            .collect();
+
+            Ok(oauth_client
+                .clone()
+                .authorize_url(|| csrf_token.clone())
+                .add_scopes(scopes)
+                .url())
         } else {
             Err(AppError::ClientConfigNotFound(provider))
         }
@@ -74,34 +91,52 @@ impl AuthnBackend for Backend {
                 HeaderValue::from_str(&format!("Bearer {}", token_res.access_token().secret()))
                     .map_err(AppError::InvalidHttpHeaderValue)?;
 
-            let login_id;
+            let login_id: String;
             match creds.provider.as_str() {
                 "github" => {
-                    let user_info = reqwest::Client::new()
+                    let response = reqwest::Client::new()
                         .get("https://api.github.com/user")
                         .header(user_agent_header, user_agent_value)
                         .header(authorization_header, authorization_value)
                         .send()
                         .await
-                        .map_err(Self::Error::Reqwest)?
+                        .map_err(Self::Error::Reqwest)?;
+
+                    let user_info = response
                         .json::<UserInfo>()
                         .await
                         .map_err(Self::Error::Reqwest)?;
 
-                    login_id = user_info.login;
+                    match user_info.login {
+                        Some(login) => login_id = login,
+                        None => {
+                            return Err(AppError::OAuth2Generic(
+                                "Login not found in response from GitHub.".to_string(),
+                            ))
+                        }
+                    }
                 }
                 "google" => {
-                    let user_info = reqwest::Client::new()
+                    let response = reqwest::Client::new()
                         .get("https://www.googleapis.com/oauth2/v3/userinfo")
                         .header(authorization_header, authorization_value)
                         .send()
                         .await
-                        .map_err(Self::Error::Reqwest)?
+                        .map_err(Self::Error::Reqwest)?;
+
+                    let user_info = response
                         .json::<UserInfo>()
                         .await
                         .map_err(Self::Error::Reqwest)?;
 
-                    login_id = user_info.login;
+                    match user_info.email {
+                        Some(email) => login_id = email,
+                        None => {
+                            return Err(AppError::OAuth2Generic(
+                                "Email not found in response from Google.".to_string(),
+                            ))
+                        }
+                    }
                 }
                 _ => {
                     return Err(AppError::OAuth2(BasicRequestTokenError::Other(format!(

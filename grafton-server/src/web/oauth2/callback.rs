@@ -26,7 +26,7 @@ mod get {
         model::AppContext,
         web::{
             oauth2::{
-                login::{LoginTemplate, NEXT_URL_KEY},
+                login::{ProviderTemplate, NEXT_URL_KEY},
                 AuthzResp, CSRF_STATE_KEY,
             },
             Credentials,
@@ -68,19 +68,31 @@ mod get {
             }
             Ok(None) => {
                 warn!("Invalid CSRF state, authentication failed");
-                let provider_name = app_ctx
+
+                let providers = app_ctx
                     .config
                     .oauth_clients
-                    .get(&provider)
+                    .values()
                     .map(|client| client.display_name.clone())
-                    .ok_or_else(|| AppError::ProviderNotFoundError(provider.clone()))?;
+                    .collect();
+
+                let next = match session.get::<String>(NEXT_URL_KEY).await {
+                    Ok(Some(next)) => next,
+                    Ok(None) => "/".to_string(),
+                    Err(e) => {
+                        error!("Session error: {:?}", e);
+                        return Err(AppError::SessionError(
+                            "Failed to retrieve next URL from session".to_string(),
+                        ));
+                    }
+                };
 
                 return Ok((
                     StatusCode::UNAUTHORIZED,
-                    LoginTemplate {
+                    ProviderTemplate {
                         message: Some("Invalid CSRF state.".to_string()),
-                        next: None,
-                        provider_name,
+                        next,
+                        providers,
                     },
                 )
                     .into_response());

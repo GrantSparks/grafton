@@ -1,19 +1,19 @@
 <html>
-  <head>
-    <title>Grafton Machine Shed</title>
-  </head>
 
-  <body>
-    {% if let Some(message) = message %}
-    <span><strong>{{ message }}</strong></span>
-    {% endif %}
+<head>
+  <title>Grafton Machine Shed</title>
+</head>
 
-    <form method="post">
-      <input type="submit" value="{{provider_name}} Login" />
+<body>
+  {% if let Some(message) = message %}
+  <span><strong>{{ message }}</strong></span>
+  {% endif %}
 
-      {% if let Some(next) = next %}
-      <input type="hidden" name="next" value="{{next}}" />
-      {% endif %}
-    </form>
-  </body>
+  <form method="post">
+    <input type="submit" value="{{provider_name}} Login" />
+    <input type="hidden" name="next" value="{{next}}" />
+  </form>
+
+</body>
+
 </html>

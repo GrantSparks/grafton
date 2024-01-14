@@ -15,31 +15,41 @@ pub const NEXT_URL_KEY: &str = "auth.next-url";
 
 #[derive(Debug, Deserialize)]
 pub struct NextUrl {
-    next: Option<String>,
+    next: String,
 }
 
 #[derive(Template)]
 #[template(path = "login.html")]
 pub struct LoginTemplate {
     pub message: Option<String>,
-    pub next: Option<String>,
+    pub next: String,
     pub provider_name: String,
+}
+
+#[derive(Template)]
+#[template(path = "provider.html")]
+pub struct ProviderTemplate {
+    pub message: Option<String>,
+    pub next: String,
+    pub providers: Vec<String>,
 }
 
 pub fn router() -> AxumRouter {
     AxumRouter::new()
         .route("/login/:provider", post(self::post::login))
         .route("/login/:provider", get(self::get::login))
+        .route("/login", get(self::get::choose_provider))
 }
 
 mod post {
+    use std::sync::Arc;
+
     use axum_login::{
-        axum::{response::Redirect, Form},
+        axum::{extract::State, response::Redirect, Form},
         tower_sessions::Session,
     };
-    use tracing::warn;
 
-    use crate::{web::oauth2::CSRF_STATE_KEY, AppError, AuthSession};
+    use crate::{model::AppContext, web::oauth2::CSRF_STATE_KEY, AppError, AuthSession};
 
     use super::{error, IntoResponse, NextUrl, Path, NEXT_URL_KEY};
 
@@ -48,6 +58,7 @@ mod post {
         auth_session: AuthSession,
         session: Session,
         Path(provider): Path<String>,
+        State(_app_ctx): State<Arc<AppContext>>,
         Form(NextUrl { next }): Form<NextUrl>,
     ) -> Result<impl IntoResponse, AppError> {
         match auth_session.backend.authorize_url(provider.clone()) {
@@ -57,9 +68,8 @@ mod post {
                     return Err(AppError::SerializationError(e.to_string()));
                 }
 
-                // Check if 'next' is None or an empty String
-                if next.as_ref().map(|s| s.is_empty()).unwrap_or(false) {
-                    warn!("NEXT_URL_KEY is empty or null");
+                if next.is_empty() {
+                    error!("NEXT_URL_KEY is empty or null");
                 }
 
                 if let Err(e) = session.insert(NEXT_URL_KEY, next).await {
@@ -85,7 +95,7 @@ mod get {
 
     use crate::{model::AppContext, AppError};
 
-    use super::{IntoResponse, LoginTemplate, NextUrl, Path};
+    use super::{IntoResponse, LoginTemplate, NextUrl, Path, ProviderTemplate};
 
     pub async fn login(
         Query(NextUrl { next }): Query<NextUrl>,
@@ -103,5 +113,23 @@ mod get {
             }
             None => Err(AppError::ProviderNotFoundError(provider)),
         }
+    }
+
+    pub async fn choose_provider(
+        Query(NextUrl { next }): Query<NextUrl>,
+        State(app_ctx): State<Arc<AppContext>>,
+    ) -> Result<ProviderTemplate, AppError> {
+        let providers = app_ctx
+            .config
+            .oauth_clients
+            .values()
+            .map(|client| client.display_name.clone())
+            .collect();
+
+        Ok(ProviderTemplate {
+            message: None,
+            next,
+            providers,
+        })
     }
 }

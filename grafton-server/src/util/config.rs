@@ -58,7 +58,7 @@ pub struct Pages {
     pub public_home: String,
     #[derivative(Default(value = "\"error\".into()"))]
     pub public_error: String,
-    #[derivative(Default(value = "\"login/github\".into()"))]
+    #[derivative(Default(value = "\"login\".into()"))]
     pub public_login: String,
     #[derivative(Default(value = "\"protected\".into()"))]
     pub protected_home: String,
