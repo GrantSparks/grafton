@@ -1,7 +1,7 @@
 use std::{io, sync::MutexGuard, sync::PoisonError};
 
 use {
-    axum_login::axum::{
+    crate::axum::{
         body::Body,
         http::{Response as HttpResponse, StatusCode},
         response::{IntoResponse, Response},

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use {
-    axum_login::{axum::async_trait, AuthnBackend, UserId},
+    axum_login::{AuthnBackend, UserId},
     oauth2::{
         basic::{BasicClient, BasicRequestTokenError},
         reqwest::async_http_client,
@@ -13,7 +13,7 @@ use {
     sqlx::SqlitePool,
 };
 
-use crate::{model::User, AppError};
+use crate::{axum::async_trait, model::User, AppError};
 
 use super::Credentials;
 

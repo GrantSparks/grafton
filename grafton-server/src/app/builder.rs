@@ -12,10 +12,15 @@ use super::{
     server::Server,
 };
 
+type RouterFactory = dyn FnOnce(Arc<AppContext>) -> AxumRouter + 'static;
+type FallbackServiceFactory =
+    dyn FnOnce(Arc<AppContext>) -> Result<ServeDir<ServeFile>, AppError> + 'static;
+
 pub struct ServerBuilder {
-    pub app_ctx: Arc<AppContext>,
-    pub protected_router: Option<AxumRouter>,
-    pub fallback_service: Option<ServeDir<ServeFile>>,
+    app_ctx: Arc<AppContext>,
+    protected_router_factory: Option<Box<RouterFactory>>,
+    unprotected_router_factory: Option<Box<RouterFactory>>,
+    fallback_service_factory: Option<Box<FallbackServiceFactory>>,
 }
 
 impl ServerBuilder {
@@ -39,18 +44,32 @@ impl ServerBuilder {
 
         Ok(Self {
             app_ctx: context,
-            protected_router: None,
-            fallback_service: None,
+            protected_router_factory: None,
+            unprotected_router_factory: None,
+            fallback_service_factory: None,
         })
     }
 
-    pub fn with_protected_router(mut self, router: AxumRouter) -> Self {
-        self.protected_router = Some(router);
+    pub fn with_unprotected_router<F>(mut self, factory: F) -> Self
+    where
+        F: FnOnce(Arc<AppContext>) -> AxumRouter + 'static,
+    {
+        self.unprotected_router_factory = Some(Box::new(factory));
+        self
+    }
+    pub fn with_protected_router<F>(mut self, factory: F) -> Self
+    where
+        F: FnOnce(Arc<AppContext>) -> AxumRouter + 'static,
+    {
+        self.protected_router_factory = Some(Box::new(factory));
         self
     }
 
-    pub fn with_fallback_service(mut self, fallback_service: ServeDir<ServeFile>) -> Self {
-        self.fallback_service = Some(fallback_service);
+    pub fn with_fallback_service<F>(mut self, factory: F) -> Self
+    where
+        F: FnOnce(Arc<AppContext>) -> Result<ServeDir<ServeFile>, AppError> + 'static,
+    {
+        self.fallback_service_factory = Some(Box::new(factory));
         self
     }
 
@@ -58,23 +77,30 @@ impl ServerBuilder {
     pub async fn build(self) -> Result<Server, AppError> {
         let app_ctx = self.app_ctx;
 
-        let protected_router = self
-            .protected_router
-            .map(|router| router.with_state(app_ctx.clone()));
+        let optional_protected_router = self
+            .protected_router_factory
+            .map(|factory| factory(app_ctx.clone()));
+        let session_layer = create_session_layer();
 
-        let router = if let Some(router) = protected_router {
-            router
+        let unprotected_router = self
+            .unprotected_router_factory
+            .map(|factory| factory(app_ctx.clone()));
+
+        let app =
+            ProtectedApp::new(app_ctx.clone(), session_layer, optional_protected_router).await?;
+        let final_protected_router = app.create_auth_router();
+
+        let router = if let Some(unprotected_router) = unprotected_router {
+            final_protected_router.merge(unprotected_router)
         } else {
-            let session_layer = create_session_layer();
-            let app = ProtectedApp::new(app_ctx.clone(), session_layer, None).await?;
-            app.create_auth_router().with_state(app_ctx.clone())
+            final_protected_router
         };
 
-        let file_service = if let Some(fallback_service) = self.fallback_service {
-            fallback_service
+        let file_service = if let Some(factory) = self.fallback_service_factory {
+            factory(app_ctx.clone())?
         } else {
             let fallback_file_path = app_ctx.config.website.web_root.clone();
-            let default_serve_file = ServeFile::new(fallback_file_path.clone());
+            let default_serve_file = ServeFile::new(&fallback_file_path);
 
             create_file_service(app_ctx.clone()).unwrap_or_else(|e| {
                 error!("Failed to build file service: {:?}", e);
@@ -83,7 +109,9 @@ impl ServerBuilder {
         };
 
         Ok(Server {
-            router: router.fallback_service(file_service),
+            router: router
+                .with_state(app_ctx.clone())
+                .fallback_service(file_service),
             config: app_ctx.config.clone(),
         })
     }

@@ -62,6 +62,10 @@ pub struct Pages {
     pub public_login: String,
     #[derivative(Default(value = "\"protected\".into()"))]
     pub protected_home: String,
+    #[derivative(Default(value = "\".well-known/ai-plugin.json\".into()"))]
+    pub plugin_json: String,
+    #[derivative(Default(value = "\"chatgpt-plugin/openapi.yaml\".into()"))]
+    pub openapi_yaml: String,
 }
 
 impl Pages {
@@ -74,6 +78,8 @@ impl Pages {
             public_error: self.join_paths(&normalized_base, &self.public_error),
             public_login: self.join_paths(&normalized_base, &self.public_login),
             protected_home: self.join_paths(&normalized_base, &self.protected_home),
+            plugin_json: self.join_paths(&normalized_base, &self.plugin_json),
+            openapi_yaml: self.join_paths(&normalized_base, &self.openapi_yaml),
         }
     }
 
@@ -238,6 +244,52 @@ pub struct ClientConfig {
     pub extra: Map<String, Value>,
 }
 
+// TODO:  Move into example plugin
+#[derive(Debug, Serialize, Deserialize, Derivative, Clone)]
+#[derivative(Default)]
+#[serde(default)]
+pub struct PluginInfo {
+    pub schema_version: String,
+    pub name_for_human: String,
+    pub name_for_model: String,
+    pub description_for_human: String,
+    pub description_for_model: String,
+    pub auth: AuthInfo,
+    pub api: ApiInfo,
+    pub logo_url: String,
+    pub contact_email: String,
+    pub legal_info_url: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Derivative, Clone)]
+#[derivative(Default)]
+#[serde(default)]
+pub struct AuthInfo {
+    #[serde(rename = "type")]
+    pub auth_type: String,
+    pub client_url: String,
+    pub scope: String,
+    pub authorization_url: String,
+    pub authorization_content_type: String,
+    pub verification_tokens: VerificationTokens,
+}
+
+#[derive(Debug, Serialize, Deserialize, Derivative, Clone)]
+#[derivative(Default)]
+#[serde(default)]
+pub struct VerificationTokens {
+    pub openai: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Derivative, Clone)]
+#[derivative(Default)]
+#[serde(default)]
+pub struct ApiInfo {
+    #[serde(rename = "type")]
+    pub api_type: String,
+    pub url: String,
+}
+
 #[derive(Debug, Serialize, Deserialize, Derivative, Clone)]
 #[derivative(Default)]
 #[serde(default)]
@@ -253,6 +305,8 @@ pub struct Config {
     pub oauth_clients: HashMap<String, ClientConfig>,
     #[derivative(Default(value = "Vec::new()"))]
     pub oso_policy_files: Vec<String>,
+    #[serde(default)]
+    pub plugin_info: PluginInfo,
 }
 
 fn default_run_mode() -> String {
@@ -336,6 +390,8 @@ mod tests {
             public_error: "/error".to_string(),
             public_login: "login".to_string(),
             protected_home: "protected".to_string(),
+            plugin_json: ".well-known/ai-plugin.json".to_string(),
+            openapi_yaml: "chatgpt-plugin/openapi.yaml".to_string(),
         };
 
         let updated_pages = pages.with_root();
@@ -343,6 +399,11 @@ mod tests {
         assert_eq!(updated_pages.public_error, "/api/error");
         assert_eq!(updated_pages.public_login, "/api/login");
         assert_eq!(updated_pages.protected_home, "/api/protected");
+        assert_eq!(updated_pages.plugin_json, "/api/.well-known/ai-plugin.json");
+        assert_eq!(
+            updated_pages.openapi_yaml,
+            "/api/chatgpt-plugin/openapi.yaml"
+        );
         Ok(())
     }
 
@@ -354,6 +415,8 @@ mod tests {
             public_error: "error".to_string(),
             public_login: "login".to_string(),
             protected_home: "protected".to_string(),
+            plugin_json: ".well-known/ai-plugin.json".to_string(),
+            openapi_yaml: "chatgpt-plugin/openapi.yaml".to_string(),
         };
 
         let updated_pages = pages.with_root();
@@ -361,6 +424,11 @@ mod tests {
         assert_eq!(updated_pages.public_error, "/api/error");
         assert_eq!(updated_pages.public_login, "/api/login");
         assert_eq!(updated_pages.protected_home, "/api/protected");
+        assert_eq!(updated_pages.plugin_json, "/api/.well-known/ai-plugin.json");
+        assert_eq!(
+            updated_pages.openapi_yaml,
+            "/api/chatgpt-plugin/openapi.yaml"
+        );
     }
 
     #[test]
@@ -371,6 +439,8 @@ mod tests {
             public_error: "/".to_string(),
             public_login: "/".to_string(),
             protected_home: "/".to_string(),
+            plugin_json: "/".to_string(),
+            openapi_yaml: "/".to_string(),
         };
 
         let updated_pages = pages.with_root();
@@ -378,6 +448,8 @@ mod tests {
         assert_eq!(updated_pages.public_error, "/");
         assert_eq!(updated_pages.public_login, "/");
         assert_eq!(updated_pages.protected_home, "/");
+        assert_eq!(updated_pages.plugin_json, "/");
+        assert_eq!(updated_pages.openapi_yaml, "/");
     }
 
     fn create_website(
@@ -479,6 +551,8 @@ mod tests {
             public_error: "/error".to_string(),
             public_login: "login".to_string(),
             protected_home: "protected".to_string(),
+            plugin_json: ".well-known/ai-plugin.json".to_string(),
+            openapi_yaml: "chatgpt-plugin/openapi.yaml".to_string(),
         };
 
         let new_pages = pages.with_root();
@@ -487,6 +561,8 @@ mod tests {
         assert_eq!(new_pages.public_error, "/api/error");
         assert_eq!(new_pages.public_login, "/api/login");
         assert_eq!(new_pages.protected_home, "/api/protected");
+        assert_eq!(new_pages.plugin_json, "/api/.well-known/ai-plugin.json");
+        assert_eq!(new_pages.openapi_yaml, "/api/chatgpt-plugin/openapi.yaml");
     }
 
     #[test]

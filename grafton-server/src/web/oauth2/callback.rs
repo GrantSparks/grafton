@@ -1,17 +1,15 @@
-use {
-    axum_login::{
-        axum::{
-            extract::{Path, Query},
-            http::StatusCode,
-            response::{IntoResponse, Redirect},
-            routing::get,
-        },
-        tower_sessions::Session,
+use axum_login::tower_sessions::Session;
+
+use crate::{
+    axum::{
+        extract::{Path, Query},
+        http::StatusCode,
+        response::{IntoResponse, Redirect},
+        routing::get,
     },
+    core::AxumRouter,
     tracing::{debug, error, warn},
 };
-
-use crate::core::AxumRouter;
 
 pub fn router() -> AxumRouter {
     AxumRouter::new().route("/oauth/:provider/callback", get(self::get::callback))
@@ -20,9 +18,8 @@ pub fn router() -> AxumRouter {
 mod get {
     use std::sync::Arc;
 
-    use axum::extract::State;
-
     use crate::{
+        axum::extract::State,
         model::AppContext,
         web::{
             oauth2::{

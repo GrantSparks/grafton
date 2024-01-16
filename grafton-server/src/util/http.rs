@@ -8,7 +8,6 @@ use std::{
 
 use {
     askama_axum::IntoResponse,
-    axum_login::axum::{extract::Request, Router},
     hyper::body::Incoming,
     hyper_util::{
         rt::{TokioExecutor, TokioIo},
@@ -19,10 +18,14 @@ use {
     tokio::net::TcpListener,
     tokio_rustls::{rustls::ServerConfig, TlsAcceptor},
     tower::ServiceExt,
-    tracing::{debug, error},
 };
 
-use crate::{util::SslConfig, AppError};
+use crate::{
+    axum::{extract::Request, Router},
+    tracing::{debug, error},
+    util::SslConfig,
+    AppError,
+};
 
 fn create_tls_config(ssl_config: &SslConfig) -> Result<ServerConfig, AppError> {
     debug!("Creating TLS Config with SSL Config: {:?}", ssl_config);

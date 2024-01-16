@@ -1,14 +1,13 @@
 use std::sync::Arc;
 
-use tracing::{debug, error};
-
 use crate::{
+    tracing::{debug, error},
     util::http::{serve_http, serve_https},
     AppError, Config,
 };
 
 pub struct Server {
-    pub router: axum_login::axum::Router,
+    pub router: crate::axum::Router,
     pub config: Arc<Config>,
 }
 

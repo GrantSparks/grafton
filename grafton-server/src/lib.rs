@@ -12,7 +12,8 @@ mod rbac;
 
 pub use {
     app::ServerBuilder,
+    axum_login::axum,
     error::AppError,
     tracing,
-    util::{ClientConfig, Config, TracingLogger},
+    util::{ClientConfig, Config, PluginInfo, TracingLogger},
 };

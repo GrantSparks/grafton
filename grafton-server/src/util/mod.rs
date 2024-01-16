@@ -1,5 +1,5 @@
 mod config;
-pub use config::{ClientConfig, Config, SslConfig};
+pub use config::{ClientConfig, Config, PluginInfo, SslConfig};
 
 pub mod http;
 

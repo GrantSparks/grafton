@@ -1,15 +1,13 @@
-use {
-    askama::Template,
-    askama_axum::IntoResponse,
-    axum_login::axum::{
+use {askama::Template, askama_axum::IntoResponse, serde::Deserialize};
+
+use crate::{
+    axum::{
         extract::Path,
         routing::{get, post},
     },
-    serde::Deserialize,
+    core::AxumRouter,
     tracing::error,
 };
-
-use crate::core::AxumRouter;
 
 pub const NEXT_URL_KEY: &str = "auth.next-url";
 
@@ -44,12 +42,14 @@ pub fn router() -> AxumRouter {
 mod post {
     use std::sync::Arc;
 
-    use axum_login::{
-        axum::{extract::State, response::Redirect, Form},
-        tower_sessions::Session,
-    };
+    use axum_login::tower_sessions::Session;
 
-    use crate::{model::AppContext, web::oauth2::CSRF_STATE_KEY, AppError, AuthSession};
+    use crate::{
+        axum::{extract::State, response::Redirect, Form},
+        model::AppContext,
+        web::oauth2::CSRF_STATE_KEY,
+        AppError, AuthSession,
+    };
 
     use super::{error, IntoResponse, NextUrl, Path, NEXT_URL_KEY};
 
@@ -91,9 +91,11 @@ mod get {
 
     use std::sync::Arc;
 
-    use axum_login::axum::extract::{Query, State};
-
-    use crate::{model::AppContext, AppError};
+    use crate::{
+        axum::extract::{Query, State},
+        model::AppContext,
+        AppError,
+    };
 
     use super::{IntoResponse, LoginTemplate, NextUrl, Path, ProviderTemplate};
 

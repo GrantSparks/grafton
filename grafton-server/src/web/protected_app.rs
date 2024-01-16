@@ -3,22 +3,22 @@ use std::{collections::HashMap, sync::Arc};
 use {
     askama_axum::IntoResponse,
     axum_login::{
-        axum::{
-            extract::OriginalUri, http::StatusCode, middleware::from_fn, middleware::Next,
-            response::Redirect,
-        },
         tower_sessions::{MemoryStore, SessionManagerLayer},
         url_with_redirect_query, AuthManagerLayerBuilder,
     },
     oauth2::{basic::BasicClient, AuthUrl, RedirectUrl, TokenUrl},
     sqlx::SqlitePool,
-    tracing::{debug, error, info},
 };
 
 use crate::{
+    axum::{
+        extract::OriginalUri, http::StatusCode, middleware::from_fn, middleware::Next,
+        response::Redirect,
+    },
     core::AxumRouter,
     error::AppError,
     model::AppContext,
+    tracing::{debug, error, info},
     web::{
         oauth2::{create_callback_router, create_login_router, create_logout_router},
         router::protected,

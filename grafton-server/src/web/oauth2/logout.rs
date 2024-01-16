@@ -1,18 +1,18 @@
-use axum_login::axum::routing::get;
-
-use crate::core::AxumRouter;
+use crate::{axum::routing::get, core::AxumRouter};
 
 pub fn router() -> AxumRouter {
     AxumRouter::new().route("/logout", get(self::get::logout))
 }
 
 mod get {
-    use axum_login::axum::{
-        http::StatusCode,
-        response::{IntoResponse, Redirect},
-    };
 
-    use crate::AuthSession;
+    use crate::{
+        axum::{
+            http::StatusCode,
+            response::{IntoResponse, Redirect},
+        },
+        AuthSession,
+    };
 
     pub async fn logout(mut auth_session: AuthSession) -> impl IntoResponse {
         match auth_session.logout().await {

@@ -1,11 +1,12 @@
 use std::sync::Arc;
 
-use {
-    askama::Template,
-    axum_login::axum::{routing::get, Router},
-};
+use askama::Template;
 
-use crate::{core::AxumRouter, model::AppContext};
+use crate::{
+    axum::{routing::get, Router},
+    core::AxumRouter,
+    model::AppContext,
+};
 
 #[derive(Template)]
 #[template(path = "protected.html")]
@@ -19,13 +20,12 @@ pub fn router(protected_home: String) -> AxumRouter {
 
 mod get {
 
-    use crate::AuthSession;
+    use crate::{
+        axum::{debug_handler, extract::State, http::StatusCode, response::IntoResponse},
+        AuthSession,
+    };
 
     use super::*;
-
-    use axum_login::axum::{
-        debug_handler, extract::State, http::StatusCode, response::IntoResponse,
-    };
 
     #[debug_handler]
     pub async fn protected(

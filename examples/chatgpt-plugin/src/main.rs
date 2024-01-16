@@ -1,5 +1,11 @@
-use grafton_server::{tracing::info, AppError, Config, ServerBuilder, TracingLogger};
-use tokio::signal;
+mod plugin;
+
+use {
+    grafton_server::{tracing::info, AppError, Config, ServerBuilder, TracingLogger},
+    tokio::signal,
+};
+
+use plugin::{build_chatgpt_plugin_router, build_todos_router};
 
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
@@ -9,7 +15,11 @@ async fn main() -> Result<(), AppError> {
 
     let builder = ServerBuilder::new(config).await?;
 
-    let server = builder.build().await?;
+    let server = builder
+        .with_protected_router(build_todos_router)
+        .with_unprotected_router(build_chatgpt_plugin_router)
+        .build()
+        .await?;
 
     server.start().await?;
     info!("Server started successfully");
