@@ -21,13 +21,12 @@ pub fn router(protected_home: String) -> AxumRouter {
 mod get {
 
     use crate::{
-        axum::{debug_handler, extract::State, http::StatusCode, response::IntoResponse},
+        axum::{extract::State, http::StatusCode, response::IntoResponse},
         AuthSession,
     };
 
     use super::*;
 
-    #[debug_handler]
     pub async fn protected(
         State(_app_ctx): State<Arc<AppContext>>,
         auth_session: AuthSession,

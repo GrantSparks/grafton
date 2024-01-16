@@ -16,9 +16,6 @@ axum-yaml = "*"
 indexmap = "2"
 openapiv3 = "*"
 
-[dependencies.axum]
-features = ["macros"] # Hack to enable macros in axum-login crate dependency
-
 [dependencies.tokio]
 features = ["full"]
 version = "1"
