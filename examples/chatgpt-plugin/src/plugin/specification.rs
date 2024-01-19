@@ -2,19 +2,19 @@ use std::sync::Arc;
 
 use grafton_server::{
     axum::{routing::get, Router},
-    model::AppContext,
+    model::Context,
     AxumRouter,
 };
 
-pub fn build_specification_router(app_ctx: Arc<AppContext>) -> AxumRouter {
-    let openapi_yaml = &app_ctx.config.website.pages.with_root().openapi_yaml;
+pub fn build_specification_router(app_ctx: &Arc<Context>) -> AxumRouter {
+    let openapi_yaml = app_ctx.config.website.pages.with_root().openapi_yaml;
 
-    Router::new().route(openapi_yaml, get(self::get::openapi_handler))
+    Router::new().route(&openapi_yaml, get(self::get::openapi_handler))
 }
 
 mod get {
 
-    use super::*;
+    use super::Arc;
 
     use {
         axum_yaml::Yaml,
@@ -25,12 +25,14 @@ mod get {
         },
     };
 
-    use grafton_server::{axum::extract::State, model::AppContext};
+    use grafton_server::{axum::extract::State, model::Context};
+    use openapiv3::StringType;
 
-    pub async fn openapi_handler(_app_ctx: State<Arc<AppContext>>) -> Yaml<OpenAPI> {
+    #[allow(clippy::too_many_lines)]
+    pub async fn openapi_handler(_app_ctx: State<Arc<Context>>) -> Yaml<OpenAPI> {
         let mut paths = Paths {
             paths: IndexMap::new(),
-            extensions: Default::default(),
+            extensions: IndexMap::default(),
         };
         paths.paths.insert(
             "/chatgpt-plugin/api/todos".to_string(),
@@ -66,7 +68,7 @@ mod get {
                             );
                             map
                         },
-                        extensions: Default::default(),
+                        extensions: IndexMap::default(),
                     },
                     ..Default::default()
                 }),
@@ -90,7 +92,7 @@ mod get {
                             discriminator: None,
                             example: None,
                             external_docs: None,
-                            extensions: Default::default(),
+                            extensions: IndexMap::default(),
                             ..Default::default()
                         },
                         schema_kind: SchemaKind::Type(Type::Array(openapiv3::ArrayType {
@@ -105,10 +107,10 @@ mod get {
                                     discriminator: None,
                                     example: None,
                                     external_docs: None,
-                                    extensions: Default::default(),
+                                    extensions: IndexMap::default(),
                                     ..Default::default()
                                 },
-                                schema_kind: SchemaKind::Type(Type::String(Default::default())),
+                                schema_kind: SchemaKind::Type(Type::String(StringType::default())),
                             }))),
                             min_items: Some(0),
                             max_items: None,
@@ -118,9 +120,9 @@ mod get {
                 );
                 schemas
             },
-            responses: Default::default(),
-            parameters: Default::default(),
-            request_bodies: Default::default(),
+            responses: IndexMap::default(),
+            parameters: IndexMap::default(),
+            request_bodies: IndexMap::default(),
             ..Default::default()
         };
 
@@ -139,7 +141,7 @@ mod get {
                 url: "https://localhost:8443".to_string(),
                 description: Some("This is a description".to_string()),
                 variables: Some(IndexMap::new()),
-                extensions: Default::default(),
+                extensions: IndexMap::default(),
             }],
             paths,
             components: Some(components),

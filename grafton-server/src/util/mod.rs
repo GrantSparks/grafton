@@ -4,7 +4,7 @@ pub use config::{ClientConfig, Config, PluginInfo, SslConfig};
 pub mod http;
 
 mod logger;
-pub use logger::TracingLogger;
+pub use logger::Logger;
 
 mod macros;
 pub use macros::*;

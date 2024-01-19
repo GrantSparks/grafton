@@ -24,10 +24,10 @@ use crate::{
     axum::{extract::Request, Router},
     tracing::{debug, error},
     util::SslConfig,
-    AppError,
+    Error,
 };
 
-fn create_tls_config(ssl_config: &SslConfig) -> Result<ServerConfig, AppError> {
+fn create_tls_config(ssl_config: &SslConfig) -> Result<ServerConfig, Error> {
     debug!("Creating TLS Config with SSL Config: {:?}", ssl_config);
 
     let certs = load_certs(Path::new(&ssl_config.cert_path))?;
@@ -44,36 +44,28 @@ fn create_tls_config(ssl_config: &SslConfig) -> Result<ServerConfig, AppError> {
 fn load_certs(path: &Path) -> io::Result<Vec<CertificateDer<'static>>> {
     debug!("Loading certificates from {:?}", path);
 
+    let file = open_cert_file(path)?;
+    parse_certs_from_file(file)
+}
+
+fn open_cert_file(path: &Path) -> io::Result<File> {
     if !path.exists() {
         error!("Certificate file path does not exist: {:?}", path);
         return Err(io::Error::new(io::ErrorKind::NotFound, "Path not found"));
     }
 
-    let file = match File::open(path) {
-        Ok(file) => {
-            debug!("Certificate file opened successfully");
-            file
-        }
-        Err(e) => {
-            error!("Failed to open certificate file: {:?}", e);
-            return Err(e);
-        }
-    };
+    File::open(path).map_err(|e| {
+        error!("Failed to open certificate file: {:?}", e);
+        e
+    })
+}
 
+fn parse_certs_from_file(file: File) -> io::Result<Vec<CertificateDer<'static>>> {
     let mut reader = BufReader::new(file);
     let mut cert_vec = Vec::new();
 
-    for cert in certs(&mut reader) {
-        match cert {
-            Ok(cert) => {
-                debug!("Certificate processed successfully");
-                cert_vec.push(cert);
-            }
-            Err(_) => {
-                error!("Invalid certificate encountered");
-                return Err(io::Error::new(io::ErrorKind::InvalidInput, "invalid cert"));
-            }
-        }
+    while let Some(cert) = read_next_cert(&mut reader)? {
+        cert_vec.push(cert);
     }
 
     if cert_vec.is_empty() {
@@ -85,25 +77,39 @@ fn load_certs(path: &Path) -> io::Result<Vec<CertificateDer<'static>>> {
     Ok(cert_vec)
 }
 
+fn read_next_cert(reader: &mut BufReader<File>) -> io::Result<Option<CertificateDer<'static>>> {
+    match certs(reader).next() {
+        Some(Ok(cert)) => {
+            debug!("Certificate processed successfully");
+            Ok(Some(cert))
+        }
+        Some(Err(_)) => {
+            error!("Invalid certificate encountered");
+            Err(io::Error::new(io::ErrorKind::InvalidInput, "invalid cert"))
+        }
+        None => Ok(None),
+    }
+}
+
 fn load_keys(path: &Path) -> io::Result<PrivateKeyDer<'static>> {
     debug!("Attempting to load keys from {:?}", path);
+    let file = open_key_file(path)?;
+    parse_keys_from_file(file)
+}
 
+fn open_key_file(path: &Path) -> io::Result<File> {
     if !path.exists() {
-        error!("Path does not exist: {:?}", path);
+        error!("Key file path does not exist: {:?}", path);
         return Err(io::Error::new(io::ErrorKind::NotFound, "Path not found"));
     }
 
-    let file = match File::open(path) {
-        Ok(file) => {
-            debug!("File opened successfully");
-            file
-        }
-        Err(e) => {
-            error!("Failed to open file: {:?}", e);
-            return Err(e);
-        }
-    };
+    File::open(path).map_err(|e| {
+        error!("Failed to open key file: {:?}", e);
+        e
+    })
+}
 
+fn parse_keys_from_file(file: File) -> io::Result<PrivateKeyDer<'static>> {
     let mut reader = BufReader::new(file);
     let keys: Result<Vec<_>, _> = pkcs8_private_keys(&mut reader).collect();
 
@@ -127,7 +133,7 @@ pub async fn serve_https(
     addr: SocketAddr,
     router: Router,
     ssl_config: SslConfig,
-) -> Result<(), AppError> {
+) -> Result<(), Error> {
     let server_config = create_tls_config(&ssl_config)?;
     let acceptor = TlsAcceptor::from(Arc::new(server_config));
     let listener = TcpListener::bind(&addr).await?;
@@ -170,7 +176,8 @@ pub async fn serve_https(
     }
 }
 
-pub async fn serve_http(addr: SocketAddr, router: Router) -> Result<(), AppError> {
+#[allow(clippy::module_name_repetitions)]
+pub async fn serve_http(addr: SocketAddr, router: Router) -> Result<(), Error> {
     debug!("Starting HTTP server at address {}", addr);
 
     let listener = TcpListener::bind(addr).await?;

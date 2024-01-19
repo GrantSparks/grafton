@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::{
     tracing::{debug, error},
     util::http::{serve_http, serve_https},
-    AppError, Config,
+    Config,
 };
 
 pub struct Server {
@@ -12,7 +12,7 @@ pub struct Server {
 }
 
 impl Server {
-    pub async fn start(self) -> Result<(), AppError> {
+    pub fn start(self) {
         debug!("Starting server with configuration: {:?}", self.config);
 
         if self.config.website.bind_ssl_config.enabled {
@@ -36,7 +36,7 @@ impl Server {
             )
                 .into();
 
-            let http_router = self.router.clone();
+            let http_router = self.router;
             tokio::spawn(async move {
                 if let Err(e) = serve_http(http_addr, http_router).await {
                     error!("Failed to start HTTP server: {}", e);
@@ -45,6 +45,5 @@ impl Server {
         }
 
         debug!("Server started successfully");
-        Ok(())
     }
 }

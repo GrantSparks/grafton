@@ -23,8 +23,7 @@ fn expand_tokens_helper(
 ) -> Value {
     if current_depth > TOKEN_RESOLVE_DEPTH_LIMIT {
         let message = format!(
-            "Token resolve recursion detected at depth {}. Current path: {}, Current value: {:?}",
-            current_depth, current_path, val
+            "Token resolve recursion detected at depth {current_depth}. Current path: {current_path}, Current value: {val:?}"
         );
         error!("{}", message);
         panic!("{}", message);
@@ -59,7 +58,7 @@ fn expand_tokens_helper(
                             Value::Number(n) => n.to_string(),
                             Value::Bool(b) => b.to_string(),
                             Value::Null => "null".to_string(),
-                            _ => format!("${{{}}}", key_path_str),
+                            _ => format!("${{{key_path_str}}}"),
                         }
                     },
                 )
@@ -72,7 +71,7 @@ fn expand_tokens_helper(
                     let expanded_current_path = if current_path.is_empty() {
                         k.to_string()
                     } else {
-                        format!("{}.{}", current_path, k)
+                        format!("{current_path}.{k}")
                     };
                     let result =
                         expand_tokens_helper(v, root, current_depth + 1, &expanded_current_path);
@@ -93,18 +92,14 @@ fn get_value_from_path(key_path: &[&str], root: &Value) -> Option<Value> {
     let mut current_value = root;
 
     for key in key_path {
-        match current_value {
-            Value::Object(obj) => {
-                current_value = obj.get(*key)?;
-            }
-            _ => {
-                warn!(
-                    "Unexpected non-object value encountered at path {}. Current value: {:?}",
-                    key_path.join("."),
-                    current_value
-                );
-                return None;
-            }
+        if let Value::Object(obj) = current_value {
+            current_value = obj.get(*key)?;
+        } else {
+            warn!(
+                "non-object value encountered at path {}. Current value: {current_value:?}",
+                key_path.join("."),
+            );
+            return None;
         }
     }
 

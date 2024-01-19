@@ -1,3 +1,5 @@
+#![allow(clippy::module_name_repetitions)]
+
 use std::{
     collections::HashMap,
     env,
@@ -19,7 +21,7 @@ use {
     url::Url,
 };
 
-use crate::{util::token_expander::expand_tokens, AppError};
+use crate::{util::token_expander::expand_tokens, Error};
 
 const DEFAULT_CONFIG_FILE: &str = "default.toml";
 
@@ -36,7 +38,7 @@ pub struct LoggerConfig {
 }
 
 #[derive(
-    Default, EnumString, EnumVariantNames, Debug, Serialize, Deserialize, Clone, PartialEq,
+    Default, EnumString, EnumVariantNames, Debug, Serialize, Deserialize, Clone, PartialEq, Eq,
 )]
 #[strum(serialize_all = "snake_case")]
 pub enum Verbosity {
@@ -54,7 +56,7 @@ pub enum Verbosity {
 pub struct Pages {
     #[derivative(Default(value = "\"/\".into()"))]
     pub root: String,
-    #[derivative(Default(value = "\"\".into()"))]
+    #[derivative(Default(value = "String::new()"))]
     pub public_home: String,
     #[derivative(Default(value = "\"error\".into()"))]
     pub public_error: String,
@@ -71,31 +73,31 @@ pub struct Pages {
 impl Pages {
     /// Returns a new `Pages` struct with the `root` path prepended to all paths.
     pub fn with_root(&self) -> Self {
-        let normalized_base = self.normalize_slash(&self.root);
+        let normalized_base = normalize_slash(&self.root);
         Self {
             root: normalized_base.clone(),
-            public_home: self.join_paths(&normalized_base, &self.public_home),
-            public_error: self.join_paths(&normalized_base, &self.public_error),
-            public_login: self.join_paths(&normalized_base, &self.public_login),
-            protected_home: self.join_paths(&normalized_base, &self.protected_home),
-            plugin_json: self.join_paths(&normalized_base, &self.plugin_json),
-            openapi_yaml: self.join_paths(&normalized_base, &self.openapi_yaml),
+            public_home: join_paths(&normalized_base, &self.public_home),
+            public_error: join_paths(&normalized_base, &self.public_error),
+            public_login: join_paths(&normalized_base, &self.public_login),
+            protected_home: join_paths(&normalized_base, &self.protected_home),
+            plugin_json: join_paths(&normalized_base, &self.plugin_json),
+            openapi_yaml: join_paths(&normalized_base, &self.openapi_yaml),
         }
     }
+}
 
-    fn normalize_slash(&self, path: &str) -> String {
-        if !path.ends_with('/') {
-            format!("{}/", path)
-        } else {
-            path.to_string()
-        }
+fn normalize_slash(path: &str) -> String {
+    if path.ends_with('/') {
+        path.to_string()
+    } else {
+        format!("{path}/")
     }
+}
 
-    fn join_paths(&self, base: &str, path: &str) -> String {
-        let trimmed_base = base.trim_end_matches('/');
-        let trimmed_path = path.trim_start_matches('/');
-        format!("{}/{}", trimmed_base, trimmed_path)
-    }
+fn join_paths(base: &str, path: &str) -> String {
+    let trimmed_base = base.trim_end_matches('/');
+    let trimmed_path = path.trim_start_matches('/');
+    format!("{trimmed_base}/{trimmed_path}")
 }
 
 #[derive(Debug, Serialize, Deserialize, Derivative, Clone)]
@@ -137,7 +139,7 @@ impl Website {
         match self.format_url(protocol, port) {
             Ok(url) => url,
             Err(err) => {
-                eprintln!("Error generating URL: {}", err);
+                eprintln!("Error generating URL: {err}");
                 String::new()
             }
         }
@@ -152,6 +154,7 @@ impl Website {
         )
     }
 
+    #[allow(clippy::missing_const_for_fn)]
     fn get_protocol_and_port(&self) -> (&str, u16) {
         if self.public_ssl_enabled {
             ("https", self.public_ports.https)
@@ -173,9 +176,9 @@ impl Website {
         }
     }
 
-    fn format_url(&self, protocol: &str, port: u16) -> Result<String, AppError> {
+    fn format_url(&self, protocol: &str, port: u16) -> Result<String, Error> {
         let base = format!("{}://{}", protocol, self.public_hostname);
-        let mut url = Url::parse(&base).map_err(|e| AppError::UrlFormatError {
+        let mut url = Url::parse(&base).map_err(|e| Error::UrlFormatError {
             protocol: protocol.to_string(),
             hostname: self.public_hostname.clone(),
             port,
@@ -185,7 +188,7 @@ impl Website {
 
         if !Self::is_default_port(protocol, port) {
             url.set_port(Some(port))
-                .map_err(|_| AppError::UrlFormatError {
+                .map_err(|()| Error::UrlFormatError {
                     protocol: protocol.to_string(),
                     hostname: self.public_hostname.clone(),
                     port,
@@ -199,7 +202,16 @@ impl Website {
 }
 
 #[derive(
-    Default, Display, EnumString, EnumVariantNames, Debug, Serialize, Deserialize, Clone, PartialEq,
+    Default,
+    Display,
+    EnumString,
+    EnumVariantNames,
+    Debug,
+    Serialize,
+    Deserialize,
+    Clone,
+    PartialEq,
+    Eq,
 )]
 #[strum(serialize_all = "snake_case")]
 pub enum SameSiteConfig {
@@ -314,6 +326,17 @@ fn default_run_mode() -> String {
 }
 
 impl Config {
+    /// Load configuration from the given directory.
+    ///
+    /// The configuration is loaded from the following files in the given directory:
+    /// - `default.toml`
+    /// - `local.toml`
+    /// - `{run_mode}.toml`
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if any of the configuration files are not found or if there
+    /// is an error parsing the configuration.
     pub fn load_from_dir(config_dir: &str) -> Result<Self> {
         let run_mode = determine_run_mode();
         let config_paths = setup_config_paths(config_dir, &run_mode);
@@ -329,11 +352,11 @@ impl Config {
                     .canonicalize()
                     .unwrap_or_else(|_| parent_dir.to_path_buf());
                 let abs_path = abs_parent.join(DEFAULT_CONFIG_FILE);
-                println!("Default configuration file not found: {:?}", abs_path);
+                println!("Default configuration file not found: {abs_path:?}");
             }
         }
         handle_env_vars();
-        let config: Config = figment.extract()?;
+        let config: Self = figment.extract()?;
         let config_value: Value = serde_json::to_value(config)?;
         let replaced = expand_tokens(&config_value);
         serde_json::from_value(replaced).map_err(Into::into)
@@ -351,15 +374,15 @@ fn setup_config_paths(config_dir: &str, run_mode: &str) -> Vec<PathBuf> {
     vec![
         absolute_config_dir.join("default.toml"),
         absolute_config_dir.join("local.toml"),
-        absolute_config_dir.join(format!("{}.toml", run_mode)),
+        absolute_config_dir.join(format!("{run_mode}.toml")),
     ]
 }
 
-fn load_config_from_file(path: &Path) -> Result<Figment, AppError> {
+fn load_config_from_file(path: &Path) -> Result<Figment, Error> {
     if path.exists() {
         Ok(Figment::new().merge(Toml::file(path)))
     } else {
-        Err(AppError::ConfigError(format!("File not found: {:?}", path)))
+        Err(Error::ConfigError(format!("File not found: {path:?}")))
     }
 }
 
@@ -383,7 +406,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_base_prepend() -> Result<(), AppError> {
+    fn test_base_prepend() {
         let pages = Pages {
             root: "/api".to_string(),
             public_home: "home".to_string(),
@@ -404,7 +427,6 @@ mod tests {
             updated_pages.openapi_yaml,
             "/api/chatgpt-plugin/openapi.yaml"
         );
-        Ok(())
     }
 
     #[test]
@@ -435,7 +457,7 @@ mod tests {
     fn test_base_prepend_with_empty_and_root_pages() {
         let pages = Pages {
             root: "/".to_string(),
-            public_home: "".to_string(),
+            public_home: String::new(),
             public_error: "/".to_string(),
             public_login: "/".to_string(),
             protected_home: "/".to_string(),
@@ -452,6 +474,7 @@ mod tests {
         assert_eq!(updated_pages.openapi_yaml, "/");
     }
 
+    #[allow(clippy::similar_names)]
     fn create_website(
         ssl_enabled: bool,
         http_port: u16,
@@ -528,19 +551,17 @@ mod tests {
 
     #[test]
     fn test_normalize_slash() {
-        let pages = Pages::default();
-        assert_eq!(pages.normalize_slash("path"), "path/");
-        assert_eq!(pages.normalize_slash("path/"), "path/");
+        assert_eq!(normalize_slash("path"), "path/");
+        assert_eq!(normalize_slash("path/"), "path/");
     }
 
     #[test]
     fn test_join_paths() {
-        let pages = Pages::default();
-        assert_eq!(pages.join_paths("/root", "/path"), "/root/path");
-        assert_eq!(pages.join_paths("/root/", "/path"), "/root/path");
-        assert_eq!(pages.join_paths("/root", "path"), "/root/path");
-        assert_eq!(pages.join_paths("/root/", "path"), "/root/path");
-        assert_eq!(pages.join_paths("/root/", "//path"), "/root/path");
+        assert_eq!(join_paths("/root", "/path"), "/root/path");
+        assert_eq!(join_paths("/root/", "/path"), "/root/path");
+        assert_eq!(join_paths("/root", "path"), "/root/path");
+        assert_eq!(join_paths("/root/", "path"), "/root/path");
+        assert_eq!(join_paths("/root/", "//path"), "/root/path");
     }
 
     #[test]
@@ -753,21 +774,33 @@ mod tests {
             Verbosity::Debug
         );
 
-        if let Some(google_client) = loaded_config_after_local_toml.oauth_clients.get("google") {
-            assert_eq!(google_client.client_id.to_string(), "YOUR GOOGLE CLIENT ID");
-            assert_eq!(
-                google_client.client_secret.secret(),
-                "YOUR GOOGLE CLIENT SECRET"
+        loaded_config_after_local_toml
+            .oauth_clients
+            .get("google")
+            .map_or_else(
+                || {
+                    panic!("Google client configuration not found");
+                },
+                |google_client| {
+                    assert_eq!(google_client.client_id.to_string(), "YOUR GOOGLE CLIENT ID");
+                    assert_eq!(
+                        google_client.client_secret.secret(),
+                        "YOUR GOOGLE CLIENT SECRET"
+                    );
+                },
             );
-        } else {
-            panic!("Google client configuration not found");
-        }
 
-        if let Some(github_client) = loaded_config_after_local_toml.oauth_clients.get("github") {
-            assert_eq!(github_client.client_id.to_string(), "xxx");
-            assert_eq!(github_client.client_secret.secret(), "xxx");
-        } else {
-            panic!("GitHub client configuration not found");
-        }
+        loaded_config_after_local_toml
+            .oauth_clients
+            .get("github")
+            .map_or_else(
+                || {
+                    panic!("GitHub client configuration not found");
+                },
+                |github_client| {
+                    assert_eq!(github_client.client_id.to_string(), "xxx");
+                    assert_eq!(github_client.client_secret.secret(), "xxx");
+                },
+            );
     }
 }

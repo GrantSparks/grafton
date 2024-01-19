@@ -5,7 +5,7 @@ use askama::Template;
 use crate::{
     axum::{routing::get, Router},
     core::AxumRouter,
-    model::AppContext,
+    model::Context,
 };
 
 #[derive(Template)]
@@ -14,8 +14,8 @@ struct ProtectedTemplate<'a> {
     username: &'a str,
 }
 
-pub fn router(protected_home: String) -> AxumRouter {
-    Router::new().route(&protected_home, get(self::get::protected))
+pub fn router(protected_home: &str) -> AxumRouter {
+    Router::new().route(protected_home, get(self::get::protected))
 }
 
 mod get {
@@ -25,10 +25,10 @@ mod get {
         AuthSession,
     };
 
-    use super::*;
+    use super::{Arc, Context, ProtectedTemplate};
 
     pub async fn protected(
-        State(_app_ctx): State<Arc<AppContext>>,
+        State(_app_ctx): State<Arc<Context>>,
         auth_session: AuthSession,
     ) -> impl IntoResponse {
         match auth_session.user {

@@ -1,1 +1,1 @@
-pub(crate) mod protected;
+pub mod protected;

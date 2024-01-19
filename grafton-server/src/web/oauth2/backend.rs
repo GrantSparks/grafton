@@ -13,7 +13,7 @@ use {
     sqlx::SqlitePool,
 };
 
-use crate::{axum::async_trait, model::User, AppError};
+use crate::{axum::async_trait, model::User, Error};
 
 use super::Credentials;
 
@@ -25,6 +25,7 @@ struct UserInfo {
     username: Option<String>,
 }
 
+#[allow(clippy::redundant_pub_crate)]
 #[derive(Debug, Clone)]
 pub(crate) struct Backend {
     db: SqlitePool,
@@ -32,31 +33,33 @@ pub(crate) struct Backend {
 }
 
 impl Backend {
+    #[allow(clippy::missing_const_for_fn)]
     pub fn new(db: SqlitePool, oauth_clients: HashMap<String, BasicClient>) -> Self {
         Self { db, oauth_clients }
     }
 
-    pub fn authorize_url(&self, provider: String) -> Result<(Url, CsrfToken), AppError> {
-        if let Some(oauth_client) = self.oauth_clients.get(&provider) {
-            let csrf_token = CsrfToken::new_random();
+    pub fn authorize_url(&self, provider: String) -> Result<(Url, CsrfToken), Error> {
+        self.oauth_clients.get(&provider).map_or_else(
+            || Err(Error::ClientConfigNotFound(provider)),
+            |oauth_client| {
+                let csrf_token = CsrfToken::new_random();
 
-            let scopes: Vec<Scope> = vec![
-                "openid".to_string(),
-                "profile".to_string(),
-                "email".to_string(),
-            ]
-            .into_iter()
-            .map(Scope::new)
-            .collect();
+                let scopes: Vec<Scope> = vec![
+                    "openid".to_string(),
+                    "profile".to_string(),
+                    "email".to_string(),
+                ]
+                .into_iter()
+                .map(Scope::new)
+                .collect();
 
-            Ok(oauth_client
-                .clone()
-                .authorize_url(|| csrf_token.clone())
-                .add_scopes(scopes)
-                .url())
-        } else {
-            Err(AppError::ClientConfigNotFound(provider))
-        }
+                Ok(oauth_client
+                    .clone()
+                    .authorize_url(|| csrf_token.clone())
+                    .add_scopes(scopes)
+                    .url())
+            },
+        )
     }
 }
 
@@ -64,7 +67,7 @@ impl Backend {
 impl AuthnBackend for Backend {
     type User = User;
     type Credentials = Credentials;
-    type Error = AppError;
+    type Error = Error;
 
     async fn authenticate(
         &self,
@@ -89,7 +92,7 @@ impl AuthnBackend for Backend {
             let user_agent_value = HeaderValue::from_static("axum-login");
             let authorization_value =
                 HeaderValue::from_str(&format!("Bearer {}", token_res.access_token().secret()))
-                    .map_err(AppError::InvalidHttpHeaderValue)?;
+                    .map_err(Error::InvalidHttpHeaderValue)?;
 
             let response = reqwest::Client::new()
                 .get(creds.userinfo_uri)
@@ -109,7 +112,7 @@ impl AuthnBackend for Backend {
                 "github" => match user_info.login {
                     Some(login) => login_id = login,
                     None => {
-                        return Err(AppError::OAuth2Generic(
+                        return Err(Error::OAuth2Generic(
                             "Login not found in response from GitHub.".to_string(),
                         ))
                     }
@@ -117,13 +120,13 @@ impl AuthnBackend for Backend {
                 "google" => match user_info.email {
                     Some(email) => login_id = email,
                     None => {
-                        return Err(AppError::OAuth2Generic(
+                        return Err(Error::OAuth2Generic(
                             "Email not found in response from Google.".to_string(),
                         ))
                     }
                 },
                 _ => {
-                    return Err(AppError::OAuth2(BasicRequestTokenError::Other(format!(
+                    return Err(Error::OAuth2(BasicRequestTokenError::Other(format!(
                         "Unsupported provider `{}`.",
                         creds.provider
                     ))))
@@ -132,13 +135,13 @@ impl AuthnBackend for Backend {
 
             // Persist user in our database so we can use `get_user`.
             let user = sqlx::query_as(
-                r#"
+                r"
             insert into users (username, access_token)
             values (?, ?)
             on conflict(username) do update
             set access_token = excluded.access_token
             returning *
-            "#,
+            ",
             )
             .bind(login_id)
             .bind(token_res.access_token().secret())
@@ -148,7 +151,7 @@ impl AuthnBackend for Backend {
 
             Ok(Some(user))
         } else {
-            return Err(AppError::ClientConfigNotFound(creds.provider));
+            return Err(Error::ClientConfigNotFound(creds.provider));
         }
     }
 

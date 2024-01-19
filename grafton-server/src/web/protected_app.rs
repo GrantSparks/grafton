@@ -16,8 +16,8 @@ use crate::{
         response::Redirect,
     },
     core::AxumRouter,
-    error::AppError,
-    model::AppContext,
+    error::Error,
+    model::Context,
     tracing::{debug, error, info},
     web::{
         oauth2::{create_callback_router, create_login_router, create_logout_router},
@@ -38,26 +38,26 @@ pub struct ProtectedApp {
 
 impl ProtectedApp {
     pub async fn new(
-        app_ctx: Arc<AppContext>,
+        app_ctx: Arc<Context>,
         session_layer: SessionManagerLayer<MemoryStore>,
         protected_router: Option<AxumRouter>,
-    ) -> Result<Self, AppError> {
+    ) -> Result<Self, Error> {
         let mut oauth_clients = HashMap::new();
 
-        for (client_name, client_config) in app_ctx.config.oauth_clients.iter() {
+        for (client_name, client_config) in &app_ctx.config.oauth_clients {
             debug!("Configuring oauth client: {}", client_name);
             let client_id = client_config.client_id.clone();
             let client_secret = client_config.client_secret.clone();
 
             let auth_url = AuthUrl::new(client_config.auth_uri.clone()).map_err(|e| {
-                AppError::InvalidAuthUrlDetailed {
+                Error::InvalidAuthUrlDetailed {
                     url: client_config.auth_uri.clone(),
                     inner: e,
                     client_name: client_name.clone(),
                 }
             })?;
             let token_url = TokenUrl::new(client_config.token_uri.clone()).map_err(|e| {
-                AppError::InvalidTokenUrlDetailed {
+                Error::InvalidTokenUrlDetailed {
                     url: client_config.token_uri.clone(),
                     inner: e,
                     client_name: client_name.clone(),
@@ -67,11 +67,11 @@ impl ProtectedApp {
             let normalised_url = app_ctx
                 .config
                 .website
-                .format_public_server_url(&format!("/oauth/{}/callback", client_name));
+                .format_public_server_url(&format!("/oauth/{client_name}/callback"));
 
             let redirect_url = RedirectUrl::new(normalised_url).map_err(|e| {
                 error!("Error parsing redirect URL: {:?}", e);
-                AppError::SerializationError(e.to_string())
+                Error::SerializationError(e.to_string())
             })?;
 
             let client =
@@ -84,7 +84,7 @@ impl ProtectedApp {
 
         let db = SqlitePool::connect(":memory:").await.map_err(|e| {
             error!("Database connection error: {}", e);
-            AppError::DatabaseConnectionErrorDetailed {
+            Error::DatabaseConnectionErrorDetailed {
                 conn_str: ":memory:".to_string(),
                 inner: e,
             }
@@ -93,7 +93,7 @@ impl ProtectedApp {
         debug!("Running database migrations");
         sqlx::migrate!().run(&db).await.map_err(|e| {
             error!("Database migration error: {}", e);
-            AppError::DatabaseMigrationErrorDetailed {
+            Error::DatabaseMigrationErrorDetailed {
                 migration_details: "Initial migration".to_string(),
                 inner: e,
             }
@@ -105,24 +105,13 @@ impl ProtectedApp {
             db,
             oauth_clients,
             session_layer,
-            login_url: app_ctx
-                .config
-                .website
-                .pages
-                .with_root()
-                .public_login
-                .clone(),
+            login_url: app_ctx.config.website.pages.with_root().public_login,
             protected_router,
-            protected_route: app_ctx
-                .config
-                .website
-                .pages
-                .with_root()
-                .protected_home
-                .clone(),
+            protected_route: app_ctx.config.website.pages.with_root().protected_home,
         })
     }
 
+    #[allow(clippy::cognitive_complexity)]
     pub fn create_auth_router(self) -> AxumRouter {
         debug!("Creating auth router");
         // Auth service.
@@ -159,18 +148,15 @@ impl ProtectedApp {
         );
         info!("Auth middleware created");
 
-        let router = match self.protected_router {
-            Some(router) => {
-                debug!("Using provided protected_router");
-                router
-            }
-            None => {
-                debug!(
-                    "No protected_router provided, using default protected::router() at route: {}",
-                    self.protected_route
-                );
-                protected::router(self.protected_route)
-            }
+        let router = if let Some(router) = self.protected_router {
+            debug!("Using provided protected_router");
+            router
+        } else {
+            debug!(
+                "No protected_router provided, using default protected::router() at route: {}",
+                self.protected_route
+            );
+            protected::router(&self.protected_route)
         };
 
         router

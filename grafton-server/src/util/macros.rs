@@ -57,12 +57,14 @@ macro_rules! new_secret_type {
             $($item)*
 
             // New method with custom documentation
+            #[allow(clippy::missing_const_for_fn)]
             #[doc = $new_doc]
             pub fn new(s: $type) -> Self {
                 $name(s)
             }
 
             // Secret method with custom documentation and security warning
+            #[allow(clippy::missing_const_for_fn)]
             #[doc = $secret_doc]
             /// # Security Warning
             /// Leaking this value may compromise security

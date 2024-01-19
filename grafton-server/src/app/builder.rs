@@ -5,26 +5,29 @@ use {
     tracing::{debug, error},
 };
 
-use crate::{core::AxumRouter, model::AppContext, util::Config, web::ProtectedApp, AppError};
+use crate::{core::AxumRouter, model::Context, util::Config, web::ProtectedApp, Error};
 
 use super::{
     middleware::file::create_file_service, middleware::session::create_session_layer,
     server::Server,
 };
 
-type RouterFactory = dyn FnOnce(Arc<AppContext>) -> AxumRouter + 'static;
+type RouterFactory = dyn FnOnce(&Arc<Context>) -> AxumRouter + Send + 'static;
 type FallbackServiceFactory =
-    dyn FnOnce(Arc<AppContext>) -> Result<ServeDir<ServeFile>, AppError> + 'static;
+    dyn FnOnce(Arc<Context>) -> Result<ServeDir<ServeFile>, Error> + Send + 'static;
 
-pub struct ServerBuilder {
-    app_ctx: Arc<AppContext>,
+pub struct Builder {
+    app_ctx: Arc<Context>,
     protected_router_factory: Option<Box<RouterFactory>>,
     unprotected_router_factory: Option<Box<RouterFactory>>,
     fallback_service_factory: Option<Box<FallbackServiceFactory>>,
 }
 
-impl ServerBuilder {
-    pub async fn new(config: Config) -> Result<Self, AppError> {
+impl Builder {
+    /// # Errors
+    ///
+    /// This function will return an error if the config is invalid or if the rbac feature is enabled and the oso policy files are invalid.
+    pub fn new(config: Config) -> Result<Self, Error> {
         debug!("Initializing ServerBuilder with config: {:?}", config);
 
         let context = {
@@ -32,11 +35,11 @@ impl ServerBuilder {
             {
                 use crate::rbac;
                 let oso = rbac::initialize(&config)?;
-                AppContext::new(config, oso)?
+                Context::new(config, oso)
             }
             #[cfg(not(feature = "rbac"))]
             {
-                AppContext::new(config)?
+                Context::new(config)?
             }
         };
 
@@ -50,41 +53,50 @@ impl ServerBuilder {
         })
     }
 
+    #[must_use]
     pub fn with_unprotected_router<F>(mut self, factory: F) -> Self
     where
-        F: FnOnce(Arc<AppContext>) -> AxumRouter + 'static,
+        F: FnOnce(&Arc<Context>) -> AxumRouter + Send + 'static,
     {
         self.unprotected_router_factory = Some(Box::new(factory));
         self
     }
+
+    #[must_use]
     pub fn with_protected_router<F>(mut self, factory: F) -> Self
     where
-        F: FnOnce(Arc<AppContext>) -> AxumRouter + 'static,
+        F: FnOnce(&Arc<Context>) -> AxumRouter + Send + 'static,
     {
         self.protected_router_factory = Some(Box::new(factory));
         self
     }
 
+    #[must_use]
     pub fn with_fallback_service<F>(mut self, factory: F) -> Self
     where
-        F: FnOnce(Arc<AppContext>) -> Result<ServeDir<ServeFile>, AppError> + 'static,
+        F: FnOnce(Arc<Context>) -> Result<ServeDir<ServeFile>, Error> + Send + 'static,
     {
         self.fallback_service_factory = Some(Box::new(factory));
         self
     }
 
-    /// Build the server. Use a default protected router and fallback service if none was provided.
-    pub async fn build(self) -> Result<Server, AppError> {
+    /// Build the server. Use a default protected router or fallback service if none was provided.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if the config is invalid
+    pub async fn build(self) -> Result<Server, Error> {
         let app_ctx = self.app_ctx;
 
         let optional_protected_router = self
             .protected_router_factory
-            .map(|factory| factory(app_ctx.clone()));
-        let session_layer = create_session_layer();
+            .map(|factory| factory(&app_ctx));
 
         let unprotected_router = self
             .unprotected_router_factory
-            .map(|factory| factory(app_ctx.clone()));
+            .map(|factory| factory(&app_ctx));
+
+        let session_layer = create_session_layer();
 
         let app =
             ProtectedApp::new(app_ctx.clone(), session_layer, optional_protected_router).await?;
@@ -102,7 +114,7 @@ impl ServerBuilder {
             let fallback_file_path = app_ctx.config.website.web_root.clone();
             let default_serve_file = ServeFile::new(&fallback_file_path);
 
-            create_file_service(app_ctx.clone()).unwrap_or_else(|e| {
+            create_file_service(&app_ctx).unwrap_or_else(|e| {
                 error!("Failed to build file service: {:?}", e);
                 ServeDir::new(&fallback_file_path).fallback(default_serve_file)
             })

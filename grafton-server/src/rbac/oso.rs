@@ -1,12 +1,12 @@
 use oso::{Class, Oso, PolarClass};
 
 use crate::{
-    error::AppError,
+    error::Error,
     model::{Role, User},
     util::Config,
 };
 
-pub fn initialize_oso(config: &Config) -> Result<Oso, AppError> {
+pub fn initialize(config: &Config) -> Result<Oso, Error> {
     let mut oso = Oso::new();
 
     oso.register_class(Class::builder::<Role>().build())?;

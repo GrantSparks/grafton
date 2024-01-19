@@ -1,3 +1,6 @@
+#![warn(clippy::pedantic)]
+#![warn(clippy::nursery)]
+
 mod app;
 mod error;
 pub mod model;
@@ -11,9 +14,9 @@ pub use core::*;
 mod rbac;
 
 pub use {
-    app::ServerBuilder,
+    app::Builder,
     axum_login::axum,
-    error::AppError,
+    error::Error,
     tracing,
-    util::{ClientConfig, Config, PluginInfo, TracingLogger},
+    util::{ClientConfig, Config, Logger, PluginInfo},
 };

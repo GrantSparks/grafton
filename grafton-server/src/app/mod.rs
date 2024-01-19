@@ -3,4 +3,4 @@ mod builder;
 mod middleware;
 mod server;
 
-pub use builder::ServerBuilder;
+pub use builder::Builder;

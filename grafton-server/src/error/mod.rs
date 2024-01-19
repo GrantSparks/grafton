@@ -20,7 +20,7 @@ use oso::{Oso, OsoError};
 use tonic::{transport::Error as TonicTransportError, Status};
 
 #[derive(Debug, Error)]
-pub enum AppError {
+pub enum Error {
     #[error("Generic error: {0}")]
     GenericError(String),
 
@@ -160,35 +160,35 @@ pub enum AppError {
 }
 
 #[cfg(feature = "rbac")]
-impl From<PoisonError<MutexGuard<'_, Oso>>> for AppError {
+impl From<PoisonError<MutexGuard<'_, Oso>>> for Error {
     fn from(err: PoisonError<MutexGuard<'_, Oso>>) -> Self {
-        AppError::MutexLockError(format!("Failed to acquire mutex lock: {}", err))
+        Self::MutexLockError(format!("Failed to acquire mutex lock: {err}"))
     }
 }
 
-impl IntoResponse for AppError {
+impl IntoResponse for Error {
     fn into_response(self) -> Response {
         let (status, error_message) = match &self {
-            AppError::GenericError(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg.clone()),
-            AppError::GeneralError(_) => (
+            Self::GenericError(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg.clone()),
+            Self::GeneralError(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "General error occurred".to_string(),
             ),
-            AppError::SerializationError(msg) => (
+            Self::SerializationError(msg) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Failed to serialize session data: {}", msg),
+                format!("Failed to serialize session data: {msg}"),
             ),
-            AppError::AuthorizationUrlError(msg) => (
+            Self::AuthorizationUrlError(msg) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Failed to generate authorization URL: {}", msg),
+                format!("Failed to generate authorization URL: {msg}"),
             ),
-            AppError::ProviderNotFoundError(msg) => (
+            Self::ProviderNotFoundError(msg) => (
                 StatusCode::NOT_FOUND,
-                format!("OAuth provider not found: {}", msg),
+                format!("OAuth provider not found: {msg}"),
             ),
-            AppError::TemplateRenderingError(msg) => (
+            Self::TemplateRenderingError(msg) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Error rendering template: {}", msg),
+                format!("Error rendering template: {msg}"),
             ),
             _ => (
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -196,7 +196,7 @@ impl IntoResponse for AppError {
             ),
         };
 
-        let full_message = format!("{}: {}", status, error_message);
+        let full_message = format!("{status}: {error_message}");
         let body = Body::from(full_message);
 
         HttpResponse::builder().status(status).body(body).unwrap() // Safe unwrap since we're constructing a valid response

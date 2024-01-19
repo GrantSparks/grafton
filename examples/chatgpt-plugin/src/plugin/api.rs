@@ -2,11 +2,11 @@ use std::sync::Arc;
 
 use grafton_server::{
     axum::{routing::get, Router},
-    model::AppContext,
+    model::Context,
     AxumRouter,
 };
 
-pub fn build_todos_router(app_ctx: Arc<AppContext>) -> AxumRouter {
+pub fn build_todos_router(app_ctx: &Arc<Context>) -> AxumRouter {
     let protected_home = &app_ctx.config.website.pages.with_root().protected_home;
 
     Router::new().route(protected_home, get(self::get::plugin_handler))
@@ -14,17 +14,17 @@ pub fn build_todos_router(app_ctx: Arc<AppContext>) -> AxumRouter {
 
 mod get {
 
-    use super::*;
+    use super::Arc;
 
     use grafton_server::{
         axum::{
             extract::State,
             response::{IntoResponse, Json},
         },
-        model::AppContext,
+        model::Context,
     };
 
-    pub async fn plugin_handler(State(_app_ctx): State<Arc<AppContext>>) -> impl IntoResponse {
+    pub async fn plugin_handler(State(_app_ctx): State<Arc<Context>>) -> impl IntoResponse {
         let todos = vec![
             String::from("Collect underpants"),
             String::from("..."),

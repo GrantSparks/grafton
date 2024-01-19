@@ -20,7 +20,7 @@ mod get {
 
     use crate::{
         axum::extract::State,
-        model::AppContext,
+        model::Context,
         web::{
             oauth2::{
                 login::{ProviderTemplate, NEXT_URL_KEY},
@@ -28,10 +28,10 @@ mod get {
             },
             Credentials,
         },
-        AppError, AuthSession,
+        AuthSession, Error,
     };
 
-    use super::*;
+    use super::{debug, error, warn, IntoResponse, Path, Query, Redirect, Session, StatusCode};
 
     pub async fn callback(
         mut auth_session: AuthSession,
@@ -41,15 +41,15 @@ mod get {
             code,
             state: new_state,
         }): Query<AuthzResp>,
-        State(app_ctx): State<Arc<AppContext>>,
+        State(app_ctx): State<Arc<Context>>,
     ) -> Result<impl IntoResponse, impl IntoResponse> {
         debug!("OAuth callback for provider: {}", provider);
 
         let old_state = session
             .get(CSRF_STATE_KEY)
             .await
-            .map_err(|_| AppError::SessionStateError("Failed to retrieve CSRF state".to_string()))?
-            .ok_or(AppError::MissingCSRFState)?;
+            .map_err(|_| Error::SessionStateError("Failed to retrieve CSRF state".to_string()))?
+            .ok_or(Error::MissingCSRFState)?;
 
         if let Some(oauth_client) = app_ctx.config.oauth_clients.get(&provider) {
             if let Some(userinfo_uri) = oauth_client.extra.get("userinfo_uri") {
@@ -82,7 +82,7 @@ mod get {
                             Ok(None) => app_ctx.config.website.pages.with_root().public_home,
                             Err(e) => {
                                 error!("Session error: {:?}", e);
-                                return Err(AppError::SessionError(
+                                return Err(Error::SessionError(
                                     "Failed to retrieve next URL from session".to_string(),
                                 ));
                             }
@@ -100,35 +100,33 @@ mod get {
                     }
                     Err(e) => {
                         error!("Internal error during authentication: {:?}", e);
-                        return Err(AppError::AuthenticationError(e.to_string()));
+                        return Err(Error::AuthenticationError(e.to_string()));
                     }
                 };
 
                 if let Err(e) = auth_session.login(&user).await {
                     error!("Error logging in the user: {:?}", e);
-                    return Err(AppError::LoginError(
-                        "Error logging in the user".to_string(),
-                    ));
+                    return Err(Error::LoginError("Error logging in the user".to_string()));
                 }
 
                 match session.remove::<String>(NEXT_URL_KEY).await {
                     Ok(Some(next)) if !next.is_empty() => Ok(Redirect::to(&next).into_response()),
-                    Ok(Some(_)) | Ok(None) => Ok(Redirect::to(
+                    Ok(Some(_) | None) => Ok(Redirect::to(
                         &app_ctx.config.website.pages.with_root().public_home,
                     )
                     .into_response()),
                     Err(e) => {
                         error!("Session error: {:?}", e);
-                        Err(AppError::SessionError(
+                        Err(Error::SessionError(
                             "Failed to retrieve next URL from session".to_string(),
                         ))
                     }
                 }
             } else {
-                Err(AppError::ClientConfigNotFound("userinfo_uri".to_string()))
+                Err(Error::ClientConfigNotFound("userinfo_uri".to_string()))
             }
         } else {
-            Err(AppError::ProviderNotFoundError(provider))
+            Err(Error::ProviderNotFoundError(provider))
         }
     }
 }
