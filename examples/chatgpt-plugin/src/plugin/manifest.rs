@@ -1,22 +1,11 @@
 use std::sync::Arc;
 
-use grafton_server::{
-    axum::{routing::get, Router},
-    GraftonConfigProvider,
-};
+use grafton_server::axum::{routing::get, Router};
 
 use crate::{AppContext, AppRouter};
 
-pub fn build_manifest_router(app_ctx: &Arc<AppContext>) -> AppRouter {
-    let plugin_json = app_ctx
-        .config
-        .get_grafton_config()
-        .website
-        .pages
-        .with_root()
-        .plugin_json;
-
-    Router::new().route(&plugin_json, get(self::get::well_known_handler))
+pub fn build_manifest_router(plugin_json: &str) -> AppRouter {
+    Router::new().route(plugin_json, get(self::get::well_known_handler))
 }
 
 mod get {

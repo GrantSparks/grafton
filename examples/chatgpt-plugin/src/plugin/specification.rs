@@ -1,22 +1,11 @@
 use std::sync::Arc;
 
-use grafton_server::{
-    axum::{routing::get, Router},
-    GraftonConfigProvider,
-};
+use grafton_server::axum::{routing::get, Router};
 
 use crate::{AppContext, AppRouter};
 
-pub fn build_specification_router(app_ctx: &Arc<AppContext>) -> AppRouter {
-    let openapi_yaml = app_ctx
-        .config
-        .get_grafton_config()
-        .website
-        .pages
-        .with_root()
-        .openapi_yaml;
-
-    Router::new().route(&openapi_yaml, get(self::get::openapi_handler))
+pub fn build_specification_router(openapi_yaml: &str) -> AppRouter {
+    Router::new().route(openapi_yaml, get(self::get::openapi_handler))
 }
 
 mod get {
