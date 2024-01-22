@@ -50,11 +50,22 @@ pub struct Info {
     pub legal_info_url: String,
 }
 
+#[derive(Debug, Serialize, Deserialize, Derivative, Clone)]
+#[derivative(Default)]
+#[serde(default)]
+pub struct ChatGptPlugin {
+    pub plugin_info: Info,
+    #[derivative(Default(value = "\"/.well-known/ai-plugin.json\".into()"))]
+    pub plugin_json: String,
+    #[derivative(Default(value = "\"/chatgpt-plugin/openapi.yaml\".into()"))]
+    pub openapi_yaml: String,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Config {
     #[serde(flatten)]
     pub base: GraftonConfig,
-    pub plugin_info: Info,
+    pub chatgpt_plugin: ChatGptPlugin,
 }
 
 impl GraftonConfigProvider for Config {

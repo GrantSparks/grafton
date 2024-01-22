@@ -22,6 +22,6 @@ mod get {
     pub async fn well_known_handler(
         State(app_ctx): State<Arc<AppContext>>,
     ) -> Result<Json<Info>, Redirect> {
-        Ok(Json(app_ctx.config.plugin_info.clone()))
+        Ok(Json(app_ctx.config.chatgpt_plugin.plugin_info.clone()))
     }
 }
