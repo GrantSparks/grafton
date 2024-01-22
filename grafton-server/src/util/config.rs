@@ -1,19 +1,10 @@
 #![allow(clippy::module_name_repetitions)]
 
-use std::{
-    collections::HashMap,
-    env,
-    net::IpAddr,
-    path::{Path, PathBuf},
-};
+use std::{collections::HashMap, net::IpAddr};
 
 use {
     anyhow::Result,
     derivative::Derivative,
-    figment::{
-        providers::{Format, Toml},
-        Figment,
-    },
     oauth2::{ClientId, ClientSecret},
     serde::{Deserialize, Serialize},
     serde_json::{Map, Value},
@@ -21,9 +12,7 @@ use {
     url::Url,
 };
 
-use crate::{util::token_expander::expand_tokens, Error};
-
-const DEFAULT_CONFIG_FILE: &str = "default.toml";
+use crate::Error;
 
 #[derive(Default, Debug, Serialize, Deserialize, Clone)]
 #[serde(default)]
@@ -256,57 +245,11 @@ pub struct ClientConfig {
     pub extra: Map<String, Value>,
 }
 
-// TODO:  Move into example plugin
 #[derive(Debug, Serialize, Deserialize, Derivative, Clone)]
 #[derivative(Default)]
 #[serde(default)]
-pub struct PluginInfo {
-    pub schema_version: String,
-    pub name_for_human: String,
-    pub name_for_model: String,
-    pub description_for_human: String,
-    pub description_for_model: String,
-    pub auth: AuthInfo,
-    pub api: ApiInfo,
-    pub logo_url: String,
-    pub contact_email: String,
-    pub legal_info_url: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, Derivative, Clone)]
-#[derivative(Default)]
-#[serde(default)]
-pub struct AuthInfo {
-    #[serde(rename = "type")]
-    pub auth_type: String,
-    pub client_url: String,
-    pub scope: String,
-    pub authorization_url: String,
-    pub authorization_content_type: String,
-    pub verification_tokens: VerificationTokens,
-}
-
-#[derive(Debug, Serialize, Deserialize, Derivative, Clone)]
-#[derivative(Default)]
-#[serde(default)]
-pub struct VerificationTokens {
-    pub openai: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, Derivative, Clone)]
-#[derivative(Default)]
-#[serde(default)]
-pub struct ApiInfo {
-    #[serde(rename = "type")]
-    pub api_type: String,
-    pub url: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, Derivative, Clone)]
-#[derivative(Default)]
-#[serde(default)]
-pub struct Config {
-    #[serde(default = "default_run_mode")]
+pub struct GraftonConfig {
+    #[derivative(Default(value = "\"dev\".into()"))]
     pub run_mode: String,
     #[serde(default)]
     pub logger: LoggerConfig,
@@ -317,92 +260,12 @@ pub struct Config {
     pub oauth_clients: HashMap<String, ClientConfig>,
     #[derivative(Default(value = "Vec::new()"))]
     pub oso_policy_files: Vec<String>,
-    #[serde(default)]
-    pub plugin_info: PluginInfo,
-}
-
-fn default_run_mode() -> String {
-    "dev".to_string()
-}
-
-impl Config {
-    /// Load configuration from the given directory.
-    ///
-    /// The configuration is loaded from the following files in the given directory:
-    /// - `default.toml`
-    /// - `local.toml`
-    /// - `{run_mode}.toml`
-    ///
-    /// # Errors
-    ///
-    /// This function returns an error if any of the configuration files are not found or if there
-    /// is an error parsing the configuration.
-    pub fn load_from_dir(config_dir: &str) -> Result<Self> {
-        let run_mode = determine_run_mode();
-        let config_paths = setup_config_paths(config_dir, &run_mode);
-
-        let mut figment = Figment::new();
-        for path in config_paths {
-            if path.exists() {
-                let config = load_config_from_file(&path)?;
-                figment = figment.merge(config);
-            } else if path.file_name().unwrap_or_default() == DEFAULT_CONFIG_FILE {
-                let parent_dir = path.parent().unwrap_or_else(|| Path::new(""));
-                let abs_parent = parent_dir
-                    .canonicalize()
-                    .unwrap_or_else(|_| parent_dir.to_path_buf());
-                let abs_path = abs_parent.join(DEFAULT_CONFIG_FILE);
-                println!("Default configuration file not found: {abs_path:?}");
-            }
-        }
-        handle_env_vars();
-        let config: Self = figment.extract()?;
-        let config_value: Value = serde_json::to_value(config)?;
-        let replaced = expand_tokens(&config_value);
-        serde_json::from_value(replaced).map_err(Into::into)
-    }
-}
-
-fn determine_run_mode() -> String {
-    env::var("RUN_MODE").unwrap_or_else(|_| "dev".to_string())
-}
-
-fn setup_config_paths(config_dir: &str, run_mode: &str) -> Vec<PathBuf> {
-    let current_dir = env::current_dir().expect("Failed to get current directory");
-    let absolute_config_dir = current_dir.join(config_dir);
-
-    vec![
-        absolute_config_dir.join("default.toml"),
-        absolute_config_dir.join("local.toml"),
-        absolute_config_dir.join(format!("{run_mode}.toml")),
-    ]
-}
-
-fn load_config_from_file(path: &Path) -> Result<Figment, Error> {
-    if path.exists() {
-        Ok(Figment::new().merge(Toml::file(path)))
-    } else {
-        Err(Error::ConfigError(format!("File not found: {path:?}")))
-    }
-}
-
-fn handle_env_vars() {
-    let original_env = env::vars().collect::<Vec<_>>();
-    for (key, value) in &original_env {
-        let new_key = map_env_var(key);
-        env::set_var(new_key, value);
-    }
-}
-
-fn map_env_var(key: &str) -> String {
-    // Example transformation logic; adjust as needed for your application
-    key.replace("WEBSITE_", "WEBSITE.")
-        .replace("SESSION_", "SESSION.")
-        .replace("LOGGER_", "LOGGER.")
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::{util::load_config_from_dir, GraftonConfigProvider};
+
     use super::*;
 
     #[test]
@@ -603,7 +466,7 @@ mod tests {
             }
         }"#;
 
-        let config: Config = serde_json::from_str(json).expect("Failed to deserialize");
+        let config: GraftonConfig = serde_json::from_str(json).expect("Failed to deserialize");
         assert_eq!(
             config.oauth_clients.get("github").unwrap().client_id,
             ClientId::new("github_id".to_string())
@@ -649,7 +512,7 @@ mod tests {
             }
         }"#;
 
-        let config: Config = serde_json::from_str(json).expect("Failed to deserialize");
+        let config: GraftonConfig = serde_json::from_str(json).expect("Failed to deserialize");
         assert_eq!(
             config.oauth_clients.get("github").unwrap().token_uri,
             "http://localhost/github/token"
@@ -685,7 +548,7 @@ mod tests {
             }
         }"#;
 
-        let result: Result<Config, _> = serde_json::from_str(json);
+        let result: Result<GraftonConfig, _> = serde_json::from_str(json);
         assert!(result.is_err());
     }
 
@@ -718,6 +581,18 @@ mod tests {
             website.format_hostname_and_port("https", website.public_ports.https),
             "https://example.com:8443"
         );
+    }
+
+    #[derive(Debug, Serialize, Deserialize, Clone)]
+    pub struct TestConfig {
+        #[serde(flatten)]
+        pub base: GraftonConfig,
+    }
+
+    impl GraftonConfigProvider for TestConfig {
+        fn get_grafton_config(&self) -> &GraftonConfig {
+            &self.base
+        }
     }
 
     #[test]
@@ -758,23 +633,54 @@ mod tests {
             .expect("Failed to write to temp default.toml file");
         std::fs::write(local_path, local_toml_content)
             .expect("Failed to write to temp local.toml file");
-        let loaded_config_after_local_toml = Config::load_from_dir(config_dir.to_str().unwrap())
-            .expect("Failed to load config after local.toml");
+        let loaded_config_after_local_toml: TestConfig =
+            load_config_from_dir(config_dir.to_str().unwrap())
+                .expect("Failed to load config after local.toml");
 
-        assert_eq!(loaded_config_after_local_toml.run_mode, "dev");
-        assert_eq!(loaded_config_after_local_toml.website.bind_ports.http, 8080);
-        assert_eq!(loaded_config_after_local_toml.website.public_ports.http, 80);
         assert_eq!(
-            loaded_config_after_local_toml.website.public_ports.https,
+            loaded_config_after_local_toml.get_grafton_config().run_mode,
+            "dev"
+        );
+        assert_eq!(
+            loaded_config_after_local_toml
+                .get_grafton_config()
+                .website
+                .bind_ports
+                .http,
+            8080
+        );
+        assert_eq!(
+            loaded_config_after_local_toml
+                .get_grafton_config()
+                .website
+                .public_ports
+                .http,
+            80
+        );
+        assert_eq!(
+            loaded_config_after_local_toml
+                .get_grafton_config()
+                .website
+                .public_ports
+                .https,
             443
         );
-        assert!(loaded_config_after_local_toml.website.public_ssl_enabled);
+        assert!(
+            loaded_config_after_local_toml
+                .get_grafton_config()
+                .website
+                .public_ssl_enabled
+        );
         assert_eq!(
-            loaded_config_after_local_toml.logger.verbosity,
+            loaded_config_after_local_toml
+                .get_grafton_config()
+                .logger
+                .verbosity,
             Verbosity::Debug
         );
 
         loaded_config_after_local_toml
+            .get_grafton_config()
             .oauth_clients
             .get("google")
             .map_or_else(
@@ -791,6 +697,7 @@ mod tests {
             );
 
         loaded_config_after_local_toml
+            .get_grafton_config()
             .oauth_clients
             .get("github")
             .map_or_else(

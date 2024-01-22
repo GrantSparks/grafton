@@ -7,6 +7,7 @@ use crate::{
     },
     core::AxumRouter,
     tracing::error,
+    GraftonConfigProvider,
 };
 
 pub const NEXT_URL_KEY: &str = "auth.next-url";
@@ -32,7 +33,10 @@ pub struct ProviderTemplate {
     pub providers: Vec<String>,
 }
 
-pub fn router() -> AxumRouter {
+pub fn router<C>() -> AxumRouter<C>
+where
+    C: GraftonConfigProvider,
+{
     AxumRouter::new()
         .route("/login/:provider", post(self::post::login))
         .route("/login/:provider", get(self::get::login))
@@ -51,15 +55,18 @@ mod post {
         AuthSession, Error,
     };
 
-    use super::{error, IntoResponse, NextUrl, Path, NEXT_URL_KEY};
+    use super::{error, GraftonConfigProvider, IntoResponse, NextUrl, Path, NEXT_URL_KEY};
 
-    pub async fn login(
+    pub async fn login<C>(
         auth_session: AuthSession,
         session: Session,
         Path(provider): Path<String>,
-        State(_app_ctx): State<Arc<Context>>,
+        State(_app_ctx): State<Arc<Context<C>>>,
         Form(NextUrl { next }): Form<NextUrl>,
-    ) -> Result<impl IntoResponse, Error> {
+    ) -> Result<impl IntoResponse, Error>
+    where
+        C: GraftonConfigProvider,
+    {
         match auth_session.backend.authorize_url(provider.clone()) {
             Ok((url, token)) => {
                 if let Err(e) = session.insert(CSRF_STATE_KEY, token.secret()).await {
@@ -93,35 +100,47 @@ mod get {
     use crate::{
         axum::extract::{Query, State},
         model::Context,
-        Error,
+        Error, GraftonConfigProvider,
     };
 
     use super::{IntoResponse, Login, NextUrl, Path, ProviderTemplate};
 
-    pub async fn login(
+    pub async fn login<C>(
         Query(NextUrl { next }): Query<NextUrl>,
         Path(provider): Path<String>,
-        State(app_ctx): State<Arc<Context>>,
-    ) -> Result<Login, impl IntoResponse> {
-        app_ctx.config.oauth_clients.get(&provider).map_or_else(
-            || Err(Error::ProviderNotFoundError(provider)),
-            |client| {
-                let provider_name = &client.display_name;
-                Ok(Login {
-                    message: None,
-                    next,
-                    provider_name: provider_name.clone(),
-                })
-            },
-        )
+        State(app_ctx): State<Arc<Context<C>>>,
+    ) -> Result<Login, impl IntoResponse>
+    where
+        C: GraftonConfigProvider,
+    {
+        app_ctx
+            .config
+            .get_grafton_config()
+            .oauth_clients
+            .get(&provider)
+            .map_or_else(
+                || Err(Error::ProviderNotFoundError(provider)),
+                |client| {
+                    let provider_name = &client.display_name;
+                    Ok(Login {
+                        message: None,
+                        next,
+                        provider_name: provider_name.clone(),
+                    })
+                },
+            )
     }
 
-    pub async fn choose_provider(
+    pub async fn choose_provider<C>(
         Query(NextUrl { next }): Query<NextUrl>,
-        State(app_ctx): State<Arc<Context>>,
-    ) -> Result<ProviderTemplate, Error> {
+        State(app_ctx): State<Arc<Context<C>>>,
+    ) -> Result<ProviderTemplate, Error>
+    where
+        C: GraftonConfigProvider,
+    {
         let providers = app_ctx
             .config
+            .get_grafton_config()
             .oauth_clients
             .values()
             .map(|client| client.display_name.clone())

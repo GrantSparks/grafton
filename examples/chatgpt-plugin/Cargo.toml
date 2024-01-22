@@ -13,8 +13,12 @@ include = [
 
 [dependencies]
 axum-yaml = "*"
+derivative = "2"
 indexmap = "2"
 openapiv3 = "*"
+
+[dependencies.serde]
+version = "1"
 
 [dependencies.tokio]
 features = ["full"]

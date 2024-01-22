@@ -1,5 +1,8 @@
+mod config_loader;
+pub use config_loader::load_config_from_dir;
+
 mod config;
-pub use config::{ClientConfig, Config, PluginInfo, SslConfig};
+pub use config::{ClientConfig, GraftonConfig, SslConfig};
 
 pub mod http;
 

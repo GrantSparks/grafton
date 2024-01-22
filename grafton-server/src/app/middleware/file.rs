@@ -3,14 +3,14 @@ use std::{
     sync::Arc,
 };
 
-use crate::{model::Context, Config, Error};
-
 use {
     tower_http::services::{ServeDir, ServeFile},
     tracing::{debug, error},
 };
 
-fn get_fallback_file(config: &Config) -> Result<PathBuf, Error> {
+use crate::{model::Context, Error, GraftonConfig, GraftonConfigProvider};
+
+fn get_fallback_file(config: &GraftonConfig) -> Result<PathBuf, Error> {
     let web_root_path = Path::new(&config.website.web_root);
     if !web_root_path.exists() {
         error!(path = %web_root_path.display(), "Web root path does not exist.");
@@ -33,10 +33,13 @@ fn get_fallback_file(config: &Config) -> Result<PathBuf, Error> {
     Ok(fallback_file_path)
 }
 
-pub fn create_file_service(app_ctx: &Arc<Context>) -> Result<ServeDir<ServeFile>, Error> {
-    let fallback_file_path = get_fallback_file(&app_ctx.config)?;
+pub fn create_file_service<C>(app_ctx: &Arc<Context<C>>) -> Result<ServeDir<ServeFile>, Error>
+where
+    C: GraftonConfigProvider,
+{
+    let fallback_file_path = get_fallback_file(app_ctx.config.get_grafton_config())?;
     Ok(
-        ServeDir::new(&app_ctx.config.website.web_root)
+        ServeDir::new(&app_ctx.config.get_grafton_config().website.web_root)
             .fallback(ServeFile::new(fallback_file_path)),
     )
 }

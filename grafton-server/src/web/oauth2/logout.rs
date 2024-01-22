@@ -1,7 +1,10 @@
-use crate::{axum::routing::get, core::AxumRouter};
+use crate::{axum::routing::get, core::AxumRouter, GraftonConfigProvider};
 
-pub fn router() -> AxumRouter {
-    AxumRouter::new().route("/logout", get(self::get::logout))
+pub fn router<C>(login_page: &str) -> AxumRouter<C>
+where
+    C: GraftonConfigProvider,
+{
+    AxumRouter::new().route(login_page, get(self::get::logout))
 }
 
 mod get {

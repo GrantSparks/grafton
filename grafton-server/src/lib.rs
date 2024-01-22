@@ -10,6 +10,8 @@ mod web;
 mod core;
 pub use core::*;
 
+use serde::{de::DeserializeOwned, Serialize};
+
 #[cfg(feature = "rbac")]
 mod rbac;
 
@@ -18,5 +20,11 @@ pub use {
     axum_login::axum,
     error::Error,
     tracing,
-    util::{ClientConfig, Config, Logger, PluginInfo},
+    util::{load_config_from_dir, ClientConfig, GraftonConfig, Logger},
 };
+
+pub trait GraftonConfigProvider:
+    'static + Send + Sync + DeserializeOwned + Serialize + std::fmt::Debug
+{
+    fn get_grafton_config(&self) -> &GraftonConfig;
+}

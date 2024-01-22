@@ -2,34 +2,39 @@ use std::sync::Arc;
 
 use grafton_server::{
     axum::{routing::get, Router},
-    model::Context,
-    AxumRouter,
+    GraftonConfigProvider,
 };
 
-pub fn build_specification_router(app_ctx: &Arc<Context>) -> AxumRouter {
-    let openapi_yaml = app_ctx.config.website.pages.with_root().openapi_yaml;
+use crate::{AppContext, AppRouter};
+
+pub fn build_specification_router(app_ctx: &Arc<AppContext>) -> AppRouter {
+    let openapi_yaml = app_ctx
+        .config
+        .get_grafton_config()
+        .website
+        .pages
+        .with_root()
+        .openapi_yaml;
 
     Router::new().route(&openapi_yaml, get(self::get::openapi_handler))
 }
 
 mod get {
 
-    use super::Arc;
+    use super::{AppContext, Arc};
 
     use {
         axum_yaml::Yaml,
+        grafton_server::axum::extract::State,
         indexmap::IndexMap,
         openapiv3::{
             Components, Info, MediaType, OpenAPI, Operation, PathItem, Paths, ReferenceOr, Schema,
-            SchemaData, SchemaKind, Server, StatusCode, Type,
+            SchemaData, SchemaKind, Server, StatusCode, StringType, Type,
         },
     };
 
-    use grafton_server::{axum::extract::State, model::Context};
-    use openapiv3::StringType;
-
     #[allow(clippy::too_many_lines)]
-    pub async fn openapi_handler(_app_ctx: State<Arc<Context>>) -> Yaml<OpenAPI> {
+    pub async fn openapi_handler(_app_ctx: State<Arc<AppContext>>) -> Yaml<OpenAPI> {
         let mut paths = Paths {
             paths: IndexMap::new(),
             extensions: IndexMap::default(),

@@ -1,29 +1,47 @@
 use std::sync::Arc;
 
 use crate::{
+    axum::Router,
     tracing::{debug, error},
     util::http::{serve_http, serve_https},
-    Config,
+    GraftonConfigProvider,
 };
 
-pub struct Server {
-    pub router: crate::axum::Router,
-    pub config: Arc<Config>,
+pub struct Server<C>
+where
+    C: GraftonConfigProvider,
+{
+    pub router: Router,
+    pub config: Arc<C>,
 }
 
-impl Server {
+impl<C> Server<C>
+where
+    C: GraftonConfigProvider,
+{
     pub fn start(self) {
         debug!("Starting server with configuration: {:?}", self.config);
 
-        if self.config.website.bind_ssl_config.enabled {
+        if self
+            .config
+            .get_grafton_config()
+            .website
+            .bind_ssl_config
+            .enabled
+        {
             let https_addr = (
-                self.config.website.bind_address,
-                self.config.website.bind_ports.https,
+                self.config.get_grafton_config().website.bind_address,
+                self.config.get_grafton_config().website.bind_ports.https,
             )
                 .into();
 
             let https_router = self.router.clone();
-            let ssl_config = self.config.website.bind_ssl_config.clone();
+            let ssl_config = self
+                .config
+                .get_grafton_config()
+                .website
+                .bind_ssl_config
+                .clone();
             tokio::spawn(async move {
                 if let Err(e) = serve_https(https_addr, https_router, ssl_config).await {
                     error!("Failed to start HTTPS server: {}", e);
@@ -31,8 +49,8 @@ impl Server {
             });
         } else {
             let http_addr = (
-                self.config.website.bind_address,
-                self.config.website.bind_ports.http,
+                self.config.get_grafton_config().website.bind_address,
+                self.config.get_grafton_config().website.bind_ports.http,
             )
                 .into();
 

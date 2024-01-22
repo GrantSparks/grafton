@@ -1,17 +1,21 @@
 mod plugin;
+use plugin::{build_chatgpt_plugin_router, build_todos_router, config::Config};
 
 use {
-    grafton_server::{tracing::info, Builder, Config, Error, Logger},
+    grafton_server::{
+        load_config_from_dir, model::Context, tracing::info, AxumRouter, Builder, Error, Logger,
+    },
     tokio::signal,
 };
 
-use plugin::{build_chatgpt_plugin_router, build_todos_router};
+type AppContext = Context<Config>;
+type AppRouter = AxumRouter<Config>;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    let config = Config::load_from_dir("examples/chatgpt-plugin/config")?;
+    let config: Config = load_config_from_dir("examples/chatgpt-plugin/config")?;
 
-    let _logger_guard = Logger::from_config(&config);
+    let _logger_guard = Logger::from_config(&config.base);
 
     let builder = Builder::new(config)?;
 

@@ -3,10 +3,10 @@ use oso::{Class, Oso, PolarClass};
 use crate::{
     error::Error,
     model::{Role, User},
-    util::Config,
+    util::GraftonConfig,
 };
 
-pub fn initialize(config: &Config) -> Result<Oso, Error> {
+pub fn initialize(config: &GraftonConfig) -> Result<Oso, Error> {
     let mut oso = Oso::new();
 
     oso.register_class(Class::builder::<Role>().build())?;

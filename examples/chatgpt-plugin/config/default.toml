@@ -20,3 +20,15 @@ protected_home = "/chatgpt-plugin/api/todos"
 [oauth_clients]
 google = { display_name = "Google", client_id = "YOUR GOOGLE CLIENT ID", client_secret = "YOUR GOOGLE CLIENT SECRET", auth_uri = "https://accounts.google.com/o/oauth2/auth", token_uri = "https://oauth2.googleapis.com/token", extra = { userinfo_uri = "https://www.googleapis.com/oauth2/v3/userinfo" } }
 github = { display_name = "GitHub", client_id = "xxx", client_secret = "xxx", auth_uri = "https://github.com/login/oauth/authorize", token_uri = "https://github.com/login/oauth/access_token", extra = { userinfo_uri = "https://api.github.com/user" } }
+
+[plugin_info]
+auth = { type = "none", client_url = "https://${website.public_hostname}/${website.pages.public_login}", scope = "", authorization_url = "https://${website.public_hostname}/auth/google/exchange", authorization_content_type = "application/json", verification_tokens = { openai = "Replace_this_string_with_the_verification_token_generated_in_the_ChatGPT_UI" } }
+schema_version = "v1"
+name_for_human = "Grafton.Ai ChatGPT Plugin API"
+name_for_model = "ai_grafton_chatgpt_plugin"
+description_for_human = "Query the Grafton.Ai knowledge engine."
+description_for_model = "Help the user with asking the Grafton.Ai knowledge engine to answer queries."
+logo_url = "https://${website.public_hostname}/images/website_logo_500x500.png"
+contact_email = "grant@grafton.ai"
+legal_info_url = "https://${website.public_hostname}/legal"
+api = { type = "openapi", url = "https://${website.public_hostname}/chatgpt-plugin/openapi.yaml" }

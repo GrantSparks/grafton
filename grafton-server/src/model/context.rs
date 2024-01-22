@@ -3,22 +3,31 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use axum_login::axum::extract::FromRef;
+
 #[cfg(feature = "rbac")]
 use oso::Oso;
 
+use crate::{error::Error, GraftonConfigProvider};
+
 use super::User;
-use crate::{error::Error, util::Config};
 
 #[derive(Clone)]
-pub struct Context {
-    pub config: Arc<Config>,
+pub struct Context<C>
+where
+    C: GraftonConfigProvider,
+{
+    pub config: Arc<C>,
 
     #[cfg(feature = "rbac")]
     pub oso: Arc<Mutex<Oso>>,
 }
 
 #[cfg(feature = "rbac")]
-impl Debug for Context {
+impl<C> Debug for Context<C>
+where
+    C: GraftonConfigProvider,
+{
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         f.debug_struct("AppContext")
             .field("config", &self.config)
@@ -28,7 +37,10 @@ impl Debug for Context {
 }
 
 #[cfg(not(feature = "rbac"))]
-impl Debug for Context {
+impl<C> Debug for Context<C>
+where
+    C: Debug,
+{
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         f.debug_struct("AppContext")
             .field("config", &self.config)
@@ -36,9 +48,12 @@ impl Debug for Context {
     }
 }
 
-impl Context {
+impl<C> Context<C>
+where
+    C: GraftonConfigProvider,
+{
     #[must_use]
-    pub fn new(config: Config, #[cfg(feature = "rbac")] oso: Oso) -> Self {
+    pub fn new(config: C, #[cfg(feature = "rbac")] oso: Oso) -> Self {
         Self {
             config: Arc::new(config),
             #[cfg(feature = "rbac")]
@@ -56,5 +71,15 @@ impl Context {
         guard
             .is_allowed(actor, action.to_string(), resource)
             .map_err(Error::from)
+    }
+}
+
+#[allow(clippy::clone_on_copy)]
+impl<C> FromRef<Context<C>> for Arc<C>
+where
+    C: GraftonConfigProvider,
+{
+    fn from_ref(state: &Context<C>) -> Self {
+        state.config.clone()
     }
 }

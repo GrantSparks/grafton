@@ -9,9 +9,13 @@ use crate::{
     },
     core::AxumRouter,
     tracing::{debug, error, warn},
+    GraftonConfigProvider,
 };
 
-pub fn router() -> AxumRouter {
+pub fn router<C>() -> AxumRouter<C>
+where
+    C: GraftonConfigProvider,
+{
     AxumRouter::new().route("/oauth/:provider/callback", get(self::get::callback))
 }
 
@@ -28,12 +32,12 @@ mod get {
             },
             Credentials,
         },
-        AuthSession, Error,
+        AuthSession, Error, GraftonConfigProvider,
     };
 
     use super::{debug, error, warn, IntoResponse, Path, Query, Redirect, Session, StatusCode};
 
-    pub async fn callback(
+    pub async fn callback<C>(
         mut auth_session: AuthSession,
         session: Session,
         Path(provider): Path<String>,
@@ -41,8 +45,11 @@ mod get {
             code,
             state: new_state,
         }): Query<AuthzResp>,
-        State(app_ctx): State<Arc<Context>>,
-    ) -> Result<impl IntoResponse, impl IntoResponse> {
+        State(app_ctx): State<Arc<Context<C>>>,
+    ) -> Result<impl IntoResponse, impl IntoResponse>
+    where
+        C: GraftonConfigProvider,
+    {
         debug!("OAuth callback for provider: {}", provider);
 
         let old_state = session
@@ -51,7 +58,12 @@ mod get {
             .map_err(|_| Error::SessionStateError("Failed to retrieve CSRF state".to_string()))?
             .ok_or(Error::MissingCSRFState)?;
 
-        if let Some(oauth_client) = app_ctx.config.oauth_clients.get(&provider) {
+        if let Some(oauth_client) = app_ctx
+            .config
+            .get_grafton_config()
+            .oauth_clients
+            .get(&provider)
+        {
             if let Some(userinfo_uri) = oauth_client.extra.get("userinfo_uri") {
                 let userinfo_uri = userinfo_uri.as_str().unwrap().to_string();
                 let creds = Credentials {
@@ -72,6 +84,7 @@ mod get {
 
                         let providers = app_ctx
                             .config
+                            .get_grafton_config()
                             .oauth_clients
                             .values()
                             .map(|client| client.display_name.clone())
@@ -79,7 +92,15 @@ mod get {
 
                         let next = match session.get::<String>(NEXT_URL_KEY).await {
                             Ok(Some(next)) => next,
-                            Ok(None) => app_ctx.config.website.pages.with_root().public_home,
+                            Ok(None) => {
+                                app_ctx
+                                    .config
+                                    .get_grafton_config()
+                                    .website
+                                    .pages
+                                    .with_root()
+                                    .public_home
+                            }
                             Err(e) => {
                                 error!("Session error: {:?}", e);
                                 return Err(Error::SessionError(
@@ -112,7 +133,13 @@ mod get {
                 match session.remove::<String>(NEXT_URL_KEY).await {
                     Ok(Some(next)) if !next.is_empty() => Ok(Redirect::to(&next).into_response()),
                     Ok(Some(_) | None) => Ok(Redirect::to(
-                        &app_ctx.config.website.pages.with_root().public_home,
+                        &app_ctx
+                            .config
+                            .get_grafton_config()
+                            .website
+                            .pages
+                            .with_root()
+                            .public_home,
                     )
                     .into_response()),
                     Err(e) => {

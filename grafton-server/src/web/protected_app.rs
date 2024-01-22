@@ -24,27 +24,33 @@ use crate::{
         router::protected,
         Backend,
     },
-    AuthSession,
+    AuthSession, GraftonConfigProvider,
 };
 
-pub struct ProtectedApp {
+pub struct ProtectedApp<C>
+where
+    C: GraftonConfigProvider,
+{
     db: SqlitePool,
     oauth_clients: HashMap<String, BasicClient>,
     session_layer: SessionManagerLayer<MemoryStore>,
     login_url: String,
-    protected_router: Option<AxumRouter>,
+    protected_router: Option<AxumRouter<C>>,
     protected_route: String,
 }
 
-impl ProtectedApp {
+impl<C> ProtectedApp<C>
+where
+    C: GraftonConfigProvider,
+{
     pub async fn new(
-        app_ctx: Arc<Context>,
+        app_ctx: Arc<Context<C>>,
         session_layer: SessionManagerLayer<MemoryStore>,
-        protected_router: Option<AxumRouter>,
+        protected_router: Option<AxumRouter<C>>,
     ) -> Result<Self, Error> {
         let mut oauth_clients = HashMap::new();
 
-        for (client_name, client_config) in &app_ctx.config.oauth_clients {
+        for (client_name, client_config) in &app_ctx.config.get_grafton_config().oauth_clients {
             debug!("Configuring oauth client: {}", client_name);
             let client_id = client_config.client_id.clone();
             let client_secret = client_config.client_secret.clone();
@@ -66,6 +72,7 @@ impl ProtectedApp {
 
             let normalised_url = app_ctx
                 .config
+                .get_grafton_config()
                 .website
                 .format_public_server_url(&format!("/oauth/{client_name}/callback"));
 
@@ -105,14 +112,26 @@ impl ProtectedApp {
             db,
             oauth_clients,
             session_layer,
-            login_url: app_ctx.config.website.pages.with_root().public_login,
+            login_url: app_ctx
+                .config
+                .get_grafton_config()
+                .website
+                .pages
+                .with_root()
+                .public_login,
             protected_router,
-            protected_route: app_ctx.config.website.pages.with_root().protected_home,
+            protected_route: app_ctx
+                .config
+                .get_grafton_config()
+                .website
+                .pages
+                .with_root()
+                .protected_home,
         })
     }
 
     #[allow(clippy::cognitive_complexity)]
-    pub fn create_auth_router(self) -> AxumRouter {
+    pub fn create_auth_router(self) -> AxumRouter<C> {
         debug!("Creating auth router");
         // Auth service.
         //
@@ -163,7 +182,7 @@ impl ProtectedApp {
             .route_layer(auth_middleware)
             .merge(create_login_router())
             .merge(create_callback_router())
-            .merge(create_logout_router())
+            .merge(create_logout_router("/logout"))
             .layer(auth_layer)
     }
 }
