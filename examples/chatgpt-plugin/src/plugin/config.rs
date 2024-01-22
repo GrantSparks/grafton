@@ -1,9 +1,9 @@
 use {
     derivative::Derivative,
+    grafton_server::{GraftonConfig, GraftonConfigProvider},
+    openapiv3::OpenAPI,
     serde::{Deserialize, Serialize},
 };
-
-use grafton_server::{GraftonConfig, GraftonConfigProvider};
 
 #[derive(Debug, Serialize, Deserialize, Derivative, Clone)]
 #[derivative(Default)]
@@ -59,6 +59,7 @@ pub struct ChatGptPlugin {
     pub plugin_json: String,
     #[derivative(Default(value = "\"/chatgpt-plugin/openapi.yaml\".into()"))]
     pub openapi_yaml: String,
+    pub openapi: OpenAPI,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

@@ -5,7 +5,7 @@ use {
     tracing::{debug, error, warn},
 };
 
-const TOKEN_RESOLVE_DEPTH_LIMIT: usize = 10;
+const TOKEN_RESOLVE_DEPTH_LIMIT: usize = 99;
 
 lazy_static! {
     static ref TOKEN_REGEX: Regex = Regex::new(r"\$\{(.*?)\}").unwrap();

@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use grafton_server::{
     axum::{routing::get, Router},
-    GraftonConfigProvider,
+    GraftonConfigProvider as _,
 };
 
 use crate::{AppContext, AppRouter};

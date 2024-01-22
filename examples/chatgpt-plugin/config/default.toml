@@ -26,7 +26,6 @@ plugin_json = "/.well-known/ai-plugin.json"
 openapi_yaml = "/chatgpt-plugin/openapi.yaml"
 
 [chatgpt_plugin.plugin_info]
-auth = { type = "none", client_url = "https://${website.public_hostname}/${website.pages.public_login}", scope = "", authorization_url = "https://${website.public_hostname}/auth/google/exchange", authorization_content_type = "application/json", verification_tokens = { openai = "Replace_this_string_with_the_verification_token_generated_in_the_ChatGPT_UI" } }
 schema_version = "v1"
 name_for_human = "Grafton.Ai ChatGPT Plugin API"
 name_for_model = "ai_grafton_chatgpt_plugin"
@@ -35,4 +34,42 @@ description_for_model = "Help the user with asking the Grafton.Ai knowledge engi
 logo_url = "https://${website.public_hostname}/images/website_logo_500x500.png"
 contact_email = "grant@grafton.ai"
 legal_info_url = "https://${website.public_hostname}/legal"
-api = { type = "openapi", url = "https://${website.public_hostname}/chatgpt-plugin/openapi.yaml" }
+
+[chatgpt_plugin.plugin_info.api]
+type = "openapi"
+url = "https://${website.public_hostname}/chatgpt-plugin/openapi.yaml"
+
+[chatgpt_plugin.plugin_info.auth]
+type = "none"
+client_url = "https://${website.public_hostname}/login"
+scope = ""
+authorization_url = "https://${website.public_hostname}/auth/google/exchange"
+authorization_content_type = "application/json"
+verification_tokens = { openai = "Replace_this_string_with_the_verification_token_generated_in_the_ChatGPT_UI" }
+
+[chatgpt_plugin.openapi]
+openapi = "3.0.1"
+
+[chatgpt_plugin.openapi.info]
+title = "YYY Plugin"
+description = "A plugin that allows the user to create and manage a TODO list using ChatGPT."
+version = "v1"
+
+[[chatgpt_plugin.openapi.servers]]
+url = "https://${website.public_hostname}"
+description = "Grafton.Ai ChatGPT Plugin API"
+
+[chatgpt_plugin.openapi.servers.variables]
+
+[chatgpt_plugin.openapi.paths."/chatgpt-plugin/api/todos"]
+get.summary = "YYY Get the list of todos"
+get.operationId = "getTodos"
+get.responses.200.description = "OK"
+get.responses.200.content."application/json".schema."$ref" = "#/components/schemas/getTodosResponse"
+
+[chatgpt_plugin.openapi.components.schemas.getTodosResponse]
+description = "YYY The list of todos."
+type = "array"
+minItems = 0
+items.description = "TODO Item"
+items.type = "string"
