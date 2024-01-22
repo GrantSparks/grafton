@@ -3,7 +3,6 @@
 use std::{collections::HashMap, net::IpAddr};
 
 use {
-    anyhow::Result,
     derivative::Derivative,
     oauth2::{ClientId, ClientSecret},
     serde::{Deserialize, Serialize},
