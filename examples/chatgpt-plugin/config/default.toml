@@ -17,6 +17,15 @@ protected_home = "/chatgpt-plugin/api/todos"
 
 [routes]
 
+#
+# DO NOT STORE SECRETS IN THIS FILE!  INSTEAD CREATE YOUR OWN local.toml FILE AND OVERRIDE THESE SETTINGS THERE.
+#
+# e.g., to override the secrets for oauth clients, create a local.toml file with the following contents:
+#
+# [oauth_clients]
+# google = { client_id = "YOUR GOOGLE CLIENT ID", client_secret = "YOUR GOOGLE CLIENT SECRET" }
+# github = { client_id = "xxx", client_secret = "xxx" }
+#
 [oauth_clients]
 google = { display_name = "Google", client_id = "YOUR GOOGLE CLIENT ID", client_secret = "YOUR GOOGLE CLIENT SECRET", auth_uri = "https://accounts.google.com/o/oauth2/auth", token_uri = "https://oauth2.googleapis.com/token", extra = { userinfo_uri = "https://www.googleapis.com/oauth2/v3/userinfo" } }
 github = { display_name = "GitHub", client_id = "xxx", client_secret = "xxx", auth_uri = "https://github.com/login/oauth/authorize", token_uri = "https://github.com/login/oauth/access_token", extra = { userinfo_uri = "https://api.github.com/user" } }

@@ -10,7 +10,7 @@ mod web;
 mod core;
 pub use core::*;
 
-use serde::{de::DeserializeOwned, Serialize};
+use grafton_config::TokenExpandingConfig;
 
 #[cfg(feature = "rbac")]
 mod rbac;
@@ -23,8 +23,6 @@ pub use {
     util::{Config, Logger},
 };
 
-pub trait ServerConfigProvider:
-    'static + Send + Sync + DeserializeOwned + Serialize + std::fmt::Debug
-{
+pub trait ServerConfigProvider: TokenExpandingConfig {
     fn get_server_config(&self) -> &Config;
 }

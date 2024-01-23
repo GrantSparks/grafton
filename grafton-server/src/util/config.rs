@@ -1,6 +1,6 @@
 #![allow(clippy::module_name_repetitions)]
 
-use grafton_config::{GraftonConfig, GraftonConfigProvider};
+use grafton_config::{GraftonConfig, GraftonConfigProvider, TokenExpandingConfig};
 
 use std::{collections::HashMap, net::IpAddr};
 
@@ -262,6 +262,8 @@ impl GraftonConfigProvider for Config {
         &self.base
     }
 }
+
+impl TokenExpandingConfig for Config {}
 
 #[cfg(test)]
 mod tests {
@@ -581,6 +583,8 @@ mod tests {
             &self.base
         }
     }
+
+    impl TokenExpandingConfig for TestConfig {}
 
     #[test]
     fn test_config_load_with_local_override() {
