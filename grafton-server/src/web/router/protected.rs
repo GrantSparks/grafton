@@ -1,11 +1,8 @@
-use std::sync::Arc;
-
 use askama::Template;
 
 use crate::{
     axum::{routing::get, Router},
     core::AxumRouter,
-    model::Context,
     ServerConfigProvider,
 };
 
@@ -26,18 +23,15 @@ mod get {
 
     use crate::{
         axum::{extract::State, http::StatusCode, response::IntoResponse},
-        AuthSession,
+        AuthSession, Config,
     };
 
-    use super::{Arc, Context, ProtectedTemplate, ServerConfigProvider};
+    use super::ProtectedTemplate;
 
-    pub async fn protected<C>(
-        State(_app_ctx): State<Arc<Context<C>>>,
+    pub async fn protected(
+        State(_config): State<Config>,
         auth_session: AuthSession,
-    ) -> impl IntoResponse
-    where
-        C: ServerConfigProvider,
-    {
+    ) -> impl IntoResponse {
         match auth_session.user {
             Some(user) => ProtectedTemplate {
                 username: &user.username,

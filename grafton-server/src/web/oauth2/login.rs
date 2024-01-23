@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use {askama::Template, askama_axum::IntoResponse, serde::Deserialize};
 
 use crate::{
@@ -9,7 +7,7 @@ use crate::{
     },
     core::AxumRouter,
     tracing::error,
-    ServerConfigProvider,
+    Config, ServerConfigProvider,
 };
 
 pub const NEXT_URL_KEY: &str = "auth.next-url";
@@ -51,23 +49,19 @@ mod post {
 
     use crate::{
         axum::{extract::State, response::Redirect, Form},
-        model::Context,
         web::oauth2::CSRF_STATE_KEY,
         AuthSession, Error,
     };
 
-    use super::{error, Arc, IntoResponse, NextUrl, Path, ServerConfigProvider, NEXT_URL_KEY};
+    use super::{error, Config, IntoResponse, NextUrl, Path, NEXT_URL_KEY};
 
-    pub async fn login<C>(
+    pub async fn login(
         auth_session: AuthSession,
         session: Session,
         Path(provider): Path<String>,
-        State(_app_ctx): State<Arc<Context<C>>>,
+        State(_config): State<Config>,
         Form(NextUrl { next }): Form<NextUrl>,
-    ) -> Result<impl IntoResponse, Error>
-    where
-        C: ServerConfigProvider,
-    {
+    ) -> Result<impl IntoResponse, Error> {
         match auth_session.backend.authorize_url(provider.clone()) {
             Ok((url, token)) => {
                 if let Err(e) = session.insert(CSRF_STATE_KEY, token.secret()).await {
@@ -98,48 +92,34 @@ mod get {
 
     use crate::{
         axum::extract::{Query, State},
-        model::Context,
         Error,
     };
 
-    use super::{Arc, IntoResponse, Login, NextUrl, Path, ProviderTemplate, ServerConfigProvider};
+    use super::{Config, IntoResponse, Login, NextUrl, Path, ProviderTemplate};
 
-    pub async fn login<C>(
+    pub async fn login(
         Query(NextUrl { next }): Query<NextUrl>,
         Path(provider): Path<String>,
-        State(app_ctx): State<Arc<Context<C>>>,
-    ) -> Result<Login, impl IntoResponse>
-    where
-        C: ServerConfigProvider,
-    {
-        app_ctx
-            .config
-            .get_server_config()
-            .oauth_clients
-            .get(&provider)
-            .map_or_else(
-                || Err(Error::ProviderNotFoundError(provider)),
-                |client| {
-                    let provider_name = &client.display_name;
-                    Ok(Login {
-                        message: None,
-                        next,
-                        provider_name: provider_name.clone(),
-                    })
-                },
-            )
+        State(config): State<Config>,
+    ) -> Result<Login, impl IntoResponse> {
+        config.oauth_clients.get(&provider).map_or_else(
+            || Err(Error::ProviderNotFoundError(provider)),
+            |client| {
+                let provider_name = &client.display_name;
+                Ok(Login {
+                    message: None,
+                    next,
+                    provider_name: provider_name.clone(),
+                })
+            },
+        )
     }
 
-    pub async fn choose_provider<C>(
+    pub async fn choose_provider(
         Query(NextUrl { next }): Query<NextUrl>,
-        State(app_ctx): State<Arc<Context<C>>>,
-    ) -> Result<ProviderTemplate, Error>
-    where
-        C: ServerConfigProvider,
-    {
-        let providers = app_ctx
-            .config
-            .get_server_config()
+        State(config): State<Config>,
+    ) -> Result<ProviderTemplate, Error> {
+        let providers = config
             .oauth_clients
             .values()
             .map(|client| client.display_name.clone())

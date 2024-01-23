@@ -1,8 +1,6 @@
-use std::sync::Arc;
-
 use grafton_server::axum::{routing::get, Router};
 
-use crate::{AppContext, AppRouter};
+use crate::AppRouter;
 
 pub fn build_manifest_router(plugin_json: &str) -> AppRouter {
     Router::new().route(plugin_json, get(self::get::well_known_handler))
@@ -15,13 +13,11 @@ mod get {
         response::{Json, Redirect},
     };
 
-    use crate::plugin::config::Info;
-
-    use super::{AppContext, Arc};
+    use crate::plugin::config::{ChatGptPlugin, Info};
 
     pub async fn well_known_handler(
-        State(app_ctx): State<Arc<AppContext>>,
+        State(chatgpt_plugin): State<ChatGptPlugin>,
     ) -> Result<Json<Info>, Redirect> {
-        Ok(Json(app_ctx.config.chatgpt_plugin.plugin_info.clone()))
+        Ok(Json(chatgpt_plugin.plugin_info.clone()))
     }
 }

@@ -2,8 +2,10 @@ use {
     axum_login::AuthUser,
     serde::{Deserialize, Serialize},
     sqlx::FromRow,
-    strum::{Display, EnumString, EnumVariantNames},
 };
+
+#[cfg(feature = "rbac")]
+use strum::{Display, EnumString, EnumVariantNames};
 
 use crate::new_secret_type;
 
@@ -64,7 +66,7 @@ pub struct User {
 pub struct User {
     pub id: i64,
     pub username: String,
-    pub pw_hash: Vec<u8>,
+    pub access_token: AccessToken,
 }
 
 impl AuthUser for User {

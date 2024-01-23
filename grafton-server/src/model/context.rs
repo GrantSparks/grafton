@@ -1,15 +1,19 @@
 use std::{
     fmt::{Debug, Formatter},
-    sync::{Arc, Mutex},
+    sync::Arc,
 };
 
 use axum_login::axum::extract::FromRef;
 
 #[cfg(feature = "rbac")]
-use oso::Oso;
+use {oso::Oso, std::sync::Mutex};
 
-use crate::{error::Error, ServerConfigProvider};
+#[cfg(feature = "rbac")]
+use crate::error::Error;
 
+use crate::{Config, ServerConfigProvider};
+
+#[cfg(feature = "rbac")]
 use super::User;
 
 #[derive(Clone)]
@@ -39,7 +43,7 @@ where
 #[cfg(not(feature = "rbac"))]
 impl<C> Debug for Context<C>
 where
-    C: Debug,
+    C: ServerConfigProvider,
 {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         f.debug_struct("AppContext")
@@ -74,12 +78,11 @@ where
     }
 }
 
-#[allow(clippy::clone_on_copy)]
-impl<C> FromRef<Context<C>> for Arc<C>
+impl<C> FromRef<Arc<Context<C>>> for Config
 where
     C: ServerConfigProvider,
 {
-    fn from_ref(state: &Context<C>) -> Self {
-        state.config.clone()
+    fn from_ref(state: &Arc<Context<C>>) -> Self {
+        state.config.get_server_config().clone()
     }
 }

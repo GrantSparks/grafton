@@ -1,4 +1,4 @@
-use std::{io, sync::MutexGuard, sync::PoisonError};
+use std::io;
 
 use {
     crate::axum::{
@@ -14,7 +14,10 @@ use {
 };
 
 #[cfg(feature = "rbac")]
-use oso::{Oso, OsoError};
+use {
+    oso::{Oso, OsoError},
+    std::{sync::MutexGuard, sync::PoisonError},
+};
 
 #[cfg(feature = "grpc")]
 use tonic::{transport::Error as TonicTransportError, Status};

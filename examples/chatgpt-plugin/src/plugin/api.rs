@@ -21,14 +21,20 @@ pub fn build_todos_router(app_ctx: &Arc<AppContext>) -> AppRouter {
 
 mod get {
 
-    use super::{AppContext, Arc};
+    use crate::plugin::config::ChatGptPlugin;
 
-    use grafton_server::axum::{
-        extract::State,
-        response::{IntoResponse, Json},
+    use grafton_server::{
+        axum::{
+            extract::State,
+            response::{IntoResponse, Json},
+        },
+        tracing::debug,
     };
 
-    pub async fn plugin_handler(State(_app_ctx): State<Arc<AppContext>>) -> impl IntoResponse {
+    pub async fn plugin_handler(State(chatgpt_plugin): State<ChatGptPlugin>) -> impl IntoResponse {
+        let s = chatgpt_plugin.openapi_yaml;
+        debug!("{s}");
+
         let todos = vec![
             String::from("Collect underpants"),
             String::from("..."),

@@ -20,11 +20,8 @@ where
 }
 
 mod get {
-    use std::sync::Arc;
-
     use crate::{
         axum::extract::State,
-        model::Context,
         web::{
             oauth2::{
                 login::{ProviderTemplate, NEXT_URL_KEY},
@@ -32,15 +29,12 @@ mod get {
             },
             Credentials,
         },
-        AuthSession, Error,
+        AuthSession, Config, Error,
     };
 
-    use super::{
-        debug, error, warn, IntoResponse, Path, Query, Redirect, ServerConfigProvider, Session,
-        StatusCode,
-    };
+    use super::{debug, error, warn, IntoResponse, Path, Query, Redirect, Session, StatusCode};
 
-    pub async fn callback<C>(
+    pub async fn callback(
         mut auth_session: AuthSession,
         session: Session,
         Path(provider): Path<String>,
@@ -48,11 +42,8 @@ mod get {
             code,
             state: new_state,
         }): Query<AuthzResp>,
-        State(app_ctx): State<Arc<Context<C>>>,
-    ) -> Result<impl IntoResponse, impl IntoResponse>
-    where
-        C: ServerConfigProvider,
-    {
+        State(config): State<Config>,
+    ) -> Result<impl IntoResponse, impl IntoResponse> {
         debug!("OAuth callback for provider: {}", provider);
 
         let old_state = session
@@ -61,12 +52,7 @@ mod get {
             .map_err(|_| Error::SessionStateError("Failed to retrieve CSRF state".to_string()))?
             .ok_or(Error::MissingCSRFState)?;
 
-        if let Some(oauth_client) = app_ctx
-            .config
-            .get_server_config()
-            .oauth_clients
-            .get(&provider)
-        {
+        if let Some(oauth_client) = config.oauth_clients.get(&provider) {
             if let Some(userinfo_uri) = oauth_client.extra.get("userinfo_uri") {
                 let userinfo_uri = userinfo_uri.as_str().unwrap().to_string();
                 let creds = Credentials {
@@ -85,9 +71,7 @@ mod get {
                     Ok(None) => {
                         warn!("Invalid CSRF state, authentication failed");
 
-                        let providers = app_ctx
-                            .config
-                            .get_server_config()
+                        let providers = config
                             .oauth_clients
                             .values()
                             .map(|client| client.display_name.clone())
@@ -95,15 +79,7 @@ mod get {
 
                         let next = match session.get::<String>(NEXT_URL_KEY).await {
                             Ok(Some(next)) => next,
-                            Ok(None) => {
-                                app_ctx
-                                    .config
-                                    .get_server_config()
-                                    .website
-                                    .pages
-                                    .with_root()
-                                    .public_home
-                            }
+                            Ok(None) => config.website.pages.with_root().public_home,
                             Err(e) => {
                                 error!("Session error: {:?}", e);
                                 return Err(Error::SessionError(
@@ -135,16 +111,10 @@ mod get {
 
                 match session.remove::<String>(NEXT_URL_KEY).await {
                     Ok(Some(next)) if !next.is_empty() => Ok(Redirect::to(&next).into_response()),
-                    Ok(Some(_) | None) => Ok(Redirect::to(
-                        &app_ctx
-                            .config
-                            .get_server_config()
-                            .website
-                            .pages
-                            .with_root()
-                            .public_home,
-                    )
-                    .into_response()),
+                    Ok(Some(_) | None) => {
+                        Ok(Redirect::to(&config.website.pages.with_root().public_home)
+                            .into_response())
+                    }
                     Err(e) => {
                         error!("Session error: {:?}", e);
                         Err(Error::SessionError(

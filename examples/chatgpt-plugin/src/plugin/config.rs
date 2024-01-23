@@ -1,9 +1,11 @@
-use grafton_config::TokenExpandingConfig;
-use grafton_server::ServerConfigProvider;
+use std::sync::Arc;
+
+use crate::AppContext;
 
 use {
     derivative::Derivative,
-    grafton_server::Config as ServerConfig,
+    grafton_config::TokenExpandingConfig,
+    grafton_server::{axum::extract::FromRef, Config as ServerConfig, ServerConfigProvider},
     openapiv3::OpenAPI,
     serde::{Deserialize, Serialize},
 };
@@ -79,3 +81,9 @@ impl ServerConfigProvider for Config {
 }
 
 impl TokenExpandingConfig for Config {}
+
+impl FromRef<Arc<AppContext>> for ChatGptPlugin {
+    fn from_ref(state: &Arc<AppContext>) -> Self {
+        state.config.chatgpt_plugin.clone()
+    }
+}

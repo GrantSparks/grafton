@@ -49,7 +49,7 @@ where
             }
             #[cfg(not(feature = "rbac"))]
             {
-                Context::new(config)?
+                Context::new(config)
             }
         };
 
