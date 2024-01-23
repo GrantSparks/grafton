@@ -23,7 +23,7 @@ use {
 use crate::{
     axum::{extract::Request, Router},
     tracing::{debug, error},
-    util::SslConfig,
+    util::config::SslConfig,
     Error,
 };
 

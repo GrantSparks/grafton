@@ -6,7 +6,6 @@ use std::{
 };
 
 use {
-    anyhow::Result,
     figment::{
         providers::{Format, Toml},
         Figment,
@@ -14,7 +13,7 @@ use {
     serde_json::Value,
 };
 
-use crate::{util::token_expander::expand_tokens, Error, GraftonConfigProvider};
+use crate::{token_expander::expand_tokens, Error, GraftonConfigProvider};
 
 const DEFAULT_CONFIG_FILE: &str = "default.toml";
 
@@ -29,14 +28,15 @@ const DEFAULT_CONFIG_FILE: &str = "default.toml";
 ///
 /// This function returns an error if any of the configuration files are not found or if there
 /// is an error parsing the configuration.
-pub fn load_config_from_dir<C: GraftonConfigProvider>(config_dir: &str) -> Result<C> {
+pub fn load_config_from_dir<C: GraftonConfigProvider>(config_dir: &str) -> Result<C, Error> {
     let run_mode = determine_run_mode();
     let config_paths = setup_config_paths(config_dir, &run_mode);
 
     let mut figment = Figment::new();
     for path in config_paths {
         if path.exists() {
-            let config = load_config_from_file(&path)?;
+            let config = load_config_from_file(&path)
+                .map_err(|e| Error::ConfigError(format!("Error loading config: {e}")))?;
             figment = figment.merge(config);
         } else if path.file_name().unwrap_or_default() == DEFAULT_CONFIG_FILE {
             let parent_dir = path.parent().unwrap_or_else(|| Path::new(""));
@@ -48,10 +48,14 @@ pub fn load_config_from_dir<C: GraftonConfigProvider>(config_dir: &str) -> Resul
         }
     }
     handle_env_vars();
-    let config: C = figment.extract()?;
-    let config_value: Value = serde_json::to_value(config)?;
+    let config: C = figment
+        .extract()
+        .map_err(|e| Error::ConfigError(format!("Error extracting config: {e}")))?;
+    let config_value: Value = serde_json::to_value(config)
+        .map_err(|e| Error::SerializationError(format!("Error serializing config: {e}")))?;
     let replaced = expand_tokens(&config_value);
-    serde_json::from_value(replaced).map_err(Into::into)
+    serde_json::from_value(replaced)
+        .map_err(|e| Error::DeserializationError(format!("Error deserializing config: {e}")))
 }
 
 fn determine_run_mode() -> String {

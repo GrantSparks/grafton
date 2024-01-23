@@ -9,12 +9,12 @@ use crate::{
     },
     core::AxumRouter,
     tracing::{debug, error, warn},
-    GraftonConfigProvider,
+    ServerConfigProvider,
 };
 
 pub fn router<C>() -> AxumRouter<C>
 where
-    C: GraftonConfigProvider,
+    C: ServerConfigProvider,
 {
     AxumRouter::new().route("/oauth/:provider/callback", get(self::get::callback))
 }
@@ -32,10 +32,13 @@ mod get {
             },
             Credentials,
         },
-        AuthSession, Error, GraftonConfigProvider,
+        AuthSession, Error,
     };
 
-    use super::{debug, error, warn, IntoResponse, Path, Query, Redirect, Session, StatusCode};
+    use super::{
+        debug, error, warn, IntoResponse, Path, Query, Redirect, ServerConfigProvider, Session,
+        StatusCode,
+    };
 
     pub async fn callback<C>(
         mut auth_session: AuthSession,
@@ -48,7 +51,7 @@ mod get {
         State(app_ctx): State<Arc<Context<C>>>,
     ) -> Result<impl IntoResponse, impl IntoResponse>
     where
-        C: GraftonConfigProvider,
+        C: ServerConfigProvider,
     {
         debug!("OAuth callback for provider: {}", provider);
 
@@ -60,7 +63,7 @@ mod get {
 
         if let Some(oauth_client) = app_ctx
             .config
-            .get_grafton_config()
+            .get_server_config()
             .oauth_clients
             .get(&provider)
         {
@@ -84,7 +87,7 @@ mod get {
 
                         let providers = app_ctx
                             .config
-                            .get_grafton_config()
+                            .get_server_config()
                             .oauth_clients
                             .values()
                             .map(|client| client.display_name.clone())
@@ -95,7 +98,7 @@ mod get {
                             Ok(None) => {
                                 app_ctx
                                     .config
-                                    .get_grafton_config()
+                                    .get_server_config()
                                     .website
                                     .pages
                                     .with_root()
@@ -135,7 +138,7 @@ mod get {
                     Ok(Some(_) | None) => Ok(Redirect::to(
                         &app_ctx
                             .config
-                            .get_grafton_config()
+                            .get_server_config()
                             .website
                             .pages
                             .with_root()

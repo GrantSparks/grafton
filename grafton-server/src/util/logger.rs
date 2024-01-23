@@ -4,7 +4,7 @@ use {
     tracing_subscriber::fmt::format::FmtSpan,
 };
 
-use super::config::{GraftonConfig, Verbosity};
+use crate::util::config::{Config, Verbosity};
 
 pub struct Logger {
     _guard: WorkerGuard, // Keeps the background worker alive
@@ -26,7 +26,7 @@ impl Logger {
     }
 
     #[must_use]
-    pub fn from_config(config: &GraftonConfig) -> Self {
+    pub fn from_config(config: &Config) -> Self {
         let level = get_log_level_from_verbosity(&config.logger.verbosity);
         log_initialization_message(&config.logger.verbosity);
         Self::new(level)

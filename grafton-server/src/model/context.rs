@@ -8,14 +8,14 @@ use axum_login::axum::extract::FromRef;
 #[cfg(feature = "rbac")]
 use oso::Oso;
 
-use crate::{error::Error, GraftonConfigProvider};
+use crate::{error::Error, ServerConfigProvider};
 
 use super::User;
 
 #[derive(Clone)]
 pub struct Context<C>
 where
-    C: GraftonConfigProvider,
+    C: ServerConfigProvider,
 {
     pub config: Arc<C>,
 
@@ -26,7 +26,7 @@ where
 #[cfg(feature = "rbac")]
 impl<C> Debug for Context<C>
 where
-    C: GraftonConfigProvider,
+    C: ServerConfigProvider,
 {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         f.debug_struct("AppContext")
@@ -50,7 +50,7 @@ where
 
 impl<C> Context<C>
 where
-    C: GraftonConfigProvider,
+    C: ServerConfigProvider,
 {
     #[must_use]
     pub fn new(config: C, #[cfg(feature = "rbac")] oso: Oso) -> Self {
@@ -77,7 +77,7 @@ where
 #[allow(clippy::clone_on_copy)]
 impl<C> FromRef<Context<C>> for Arc<C>
 where
-    C: GraftonConfigProvider,
+    C: ServerConfigProvider,
 {
     fn from_ref(state: &Context<C>) -> Self {
         state.config.clone()

@@ -31,7 +31,6 @@ grpc = ["tonic"]
 rbac = ["oso"]
 
 [dependencies]
-anyhow = "1"
 askama_axum = "*"
 derivative = "2"
 lazy_static = "1"
@@ -46,6 +45,9 @@ tracing = "*"
 tracing-appender = "*"
 tracing-subscriber = "*"
 url = "2"
+
+[dependencies.grafton-config]
+path = "../grafton-config"
 
 [dependencies.askama]
 features = ["with-axum"]

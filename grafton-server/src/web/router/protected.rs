@@ -6,7 +6,7 @@ use crate::{
     axum::{routing::get, Router},
     core::AxumRouter,
     model::Context,
-    GraftonConfigProvider,
+    ServerConfigProvider,
 };
 
 #[derive(Template)]
@@ -17,7 +17,7 @@ struct ProtectedTemplate<'a> {
 
 pub fn router<C>(protected_home: &str) -> AxumRouter<C>
 where
-    C: GraftonConfigProvider,
+    C: ServerConfigProvider,
 {
     Router::new().route(protected_home, get(self::get::protected))
 }
@@ -29,14 +29,14 @@ mod get {
         AuthSession,
     };
 
-    use super::{Arc, Context, GraftonConfigProvider, ProtectedTemplate};
+    use super::{Arc, Context, ProtectedTemplate, ServerConfigProvider};
 
     pub async fn protected<C>(
         State(_app_ctx): State<Arc<Context<C>>>,
         auth_session: AuthSession,
     ) -> impl IntoResponse
     where
-        C: GraftonConfigProvider,
+        C: ServerConfigProvider,
     {
         match auth_session.user {
             Some(user) => ProtectedTemplate {

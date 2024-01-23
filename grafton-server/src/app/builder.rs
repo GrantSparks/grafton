@@ -5,7 +5,7 @@ use {
     tracing::{debug, error},
 };
 
-use crate::{core::AxumRouter, model::Context, web::ProtectedApp, Error, GraftonConfigProvider};
+use crate::{core::AxumRouter, model::Context, web::ProtectedApp, Error, ServerConfigProvider};
 
 #[cfg(feature = "rbac")]
 use crate::rbac;
@@ -22,7 +22,7 @@ type FallbackServiceFactory<C> =
 
 pub struct Builder<C>
 where
-    C: GraftonConfigProvider,
+    C: ServerConfigProvider,
 {
     app_ctx: Arc<Context<C>>,
     protected_router_factory: Option<Box<RouterFactory<C>>>,
@@ -32,7 +32,7 @@ where
 
 impl<C> Builder<C>
 where
-    C: GraftonConfigProvider,
+    C: ServerConfigProvider,
 {
     /// # Errors
     ///
@@ -44,7 +44,7 @@ where
             #[cfg(feature = "rbac")]
             {
                 // You'll need to modify `rbac::initialize` and `Context::new` to accept a generic config
-                let oso = rbac::initialize(config.get_grafton_config())?;
+                let oso = rbac::initialize(config.get_server_config())?;
                 Context::new(config, oso)
             }
             #[cfg(not(feature = "rbac"))]
@@ -121,7 +121,7 @@ where
         let file_service = if let Some(factory) = self.fallback_service_factory {
             factory(&app_ctx)?
         } else {
-            let fallback_file_path = app_ctx.config.get_grafton_config().website.web_root.clone();
+            let fallback_file_path = app_ctx.config.get_server_config().website.web_root.clone();
             let default_serve_file = ServeFile::new(&fallback_file_path);
 
             create_file_service(&app_ctx).unwrap_or_else(|e| {

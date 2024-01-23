@@ -1,8 +1,8 @@
-use crate::{axum::routing::get, core::AxumRouter, GraftonConfigProvider};
+use crate::{axum::routing::get, core::AxumRouter, ServerConfigProvider};
 
 pub fn router<C>(login_page: &str) -> AxumRouter<C>
 where
-    C: GraftonConfigProvider,
+    C: ServerConfigProvider,
 {
     AxumRouter::new().route(login_page, get(self::get::logout))
 }

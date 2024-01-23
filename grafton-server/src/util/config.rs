@@ -1,6 +1,10 @@
 #![allow(clippy::module_name_repetitions)]
 
+use grafton_config::{GraftonConfig, GraftonConfigProvider};
+
 use std::{collections::HashMap, net::IpAddr};
+
+use crate::Error;
 
 use {
     derivative::Derivative,
@@ -10,8 +14,6 @@ use {
     strum::{Display, EnumString, EnumVariantNames},
     url::Url,
 };
-
-use crate::Error;
 
 #[derive(Default, Debug, Serialize, Deserialize, Clone)]
 #[serde(default)]
@@ -241,9 +243,9 @@ pub struct ClientConfig {
 #[derive(Debug, Serialize, Deserialize, Derivative, Clone)]
 #[derivative(Default)]
 #[serde(default)]
-pub struct GraftonConfig {
-    #[derivative(Default(value = "\"dev\".into()"))]
-    pub run_mode: String,
+pub struct Config {
+    #[serde(flatten)]
+    pub base: GraftonConfig,
     #[serde(default)]
     pub logger: LoggerConfig,
     #[serde(default)]
@@ -255,9 +257,17 @@ pub struct GraftonConfig {
     pub oso_policy_files: Vec<String>,
 }
 
+impl GraftonConfigProvider for Config {
+    fn get_grafton_config(&self) -> &GraftonConfig {
+        &self.base
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::{util::load_config_from_dir, GraftonConfigProvider};
+    use grafton_config::{load_config_from_dir, GraftonConfigProvider};
+
+    use crate::ServerConfigProvider;
 
     use super::*;
 
@@ -437,7 +447,7 @@ mod tests {
             }
         }"#;
 
-        let config: GraftonConfig = serde_json::from_str(json).expect("Failed to deserialize");
+        let config: Config = serde_json::from_str(json).expect("Failed to deserialize");
         assert_eq!(
             config.oauth_clients.get("github").unwrap().client_id,
             ClientId::new("github_id".to_string())
@@ -483,7 +493,7 @@ mod tests {
             }
         }"#;
 
-        let config: GraftonConfig = serde_json::from_str(json).expect("Failed to deserialize");
+        let config: Config = serde_json::from_str(json).expect("Failed to deserialize");
         assert_eq!(
             config.oauth_clients.get("github").unwrap().token_uri,
             "http://localhost/github/token"
@@ -557,11 +567,17 @@ mod tests {
     #[derive(Debug, Serialize, Deserialize, Clone)]
     pub struct TestConfig {
         #[serde(flatten)]
-        pub base: GraftonConfig,
+        pub base: Config,
     }
 
     impl GraftonConfigProvider for TestConfig {
         fn get_grafton_config(&self) -> &GraftonConfig {
+            self.base.get_grafton_config()
+        }
+    }
+
+    impl ServerConfigProvider for TestConfig {
+        fn get_server_config(&self) -> &Config {
             &self.base
         }
     }
@@ -614,7 +630,7 @@ mod tests {
         );
         assert_eq!(
             loaded_config_after_local_toml
-                .get_grafton_config()
+                .get_server_config()
                 .website
                 .bind_ports
                 .http,
@@ -622,7 +638,7 @@ mod tests {
         );
         assert_eq!(
             loaded_config_after_local_toml
-                .get_grafton_config()
+                .get_server_config()
                 .website
                 .public_ports
                 .http,
@@ -630,7 +646,7 @@ mod tests {
         );
         assert_eq!(
             loaded_config_after_local_toml
-                .get_grafton_config()
+                .get_server_config()
                 .website
                 .public_ports
                 .https,
@@ -638,20 +654,20 @@ mod tests {
         );
         assert!(
             loaded_config_after_local_toml
-                .get_grafton_config()
+                .get_server_config()
                 .website
                 .public_ssl_enabled
         );
         assert_eq!(
             loaded_config_after_local_toml
-                .get_grafton_config()
+                .get_server_config()
                 .logger
                 .verbosity,
             Verbosity::Debug
         );
 
         loaded_config_after_local_toml
-            .get_grafton_config()
+            .get_server_config()
             .oauth_clients
             .get("google")
             .map_or_else(
@@ -668,7 +684,7 @@ mod tests {
             );
 
         loaded_config_after_local_toml
-            .get_grafton_config()
+            .get_server_config()
             .oauth_clients
             .get("github")
             .map_or_else(

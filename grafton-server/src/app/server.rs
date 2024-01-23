@@ -4,12 +4,12 @@ use crate::{
     axum::Router,
     tracing::{debug, error},
     util::http::{serve_http, serve_https},
-    GraftonConfigProvider,
+    ServerConfigProvider,
 };
 
 pub struct Server<C>
 where
-    C: GraftonConfigProvider,
+    C: ServerConfigProvider,
 {
     pub router: Router,
     pub config: Arc<C>,
@@ -17,28 +17,28 @@ where
 
 impl<C> Server<C>
 where
-    C: GraftonConfigProvider,
+    C: ServerConfigProvider,
 {
     pub fn start(self) {
         debug!("Starting server with configuration: {:?}", self.config);
 
         if self
             .config
-            .get_grafton_config()
+            .get_server_config()
             .website
             .bind_ssl_config
             .enabled
         {
             let https_addr = (
-                self.config.get_grafton_config().website.bind_address,
-                self.config.get_grafton_config().website.bind_ports.https,
+                self.config.get_server_config().website.bind_address,
+                self.config.get_server_config().website.bind_ports.https,
             )
                 .into();
 
             let https_router = self.router.clone();
             let ssl_config = self
                 .config
-                .get_grafton_config()
+                .get_server_config()
                 .website
                 .bind_ssl_config
                 .clone();
@@ -49,8 +49,8 @@ where
             });
         } else {
             let http_addr = (
-                self.config.get_grafton_config().website.bind_address,
-                self.config.get_grafton_config().website.bind_ports.http,
+                self.config.get_server_config().website.bind_address,
+                self.config.get_server_config().website.bind_ports.http,
             )
                 .into();
 

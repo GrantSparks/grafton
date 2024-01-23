@@ -2,7 +2,6 @@ use {
     lazy_static::lazy_static,
     regex::{Captures, Regex},
     serde_json::Value,
-    tracing::{debug, error, warn},
 };
 
 const TOKEN_RESOLVE_DEPTH_LIMIT: usize = 99;
@@ -25,7 +24,6 @@ fn expand_tokens_helper(
         let message = format!(
             "Token resolve recursion detected at depth {current_depth}. Current path: {current_path}, Current value: {val:?}"
         );
-        error!("{}", message);
         panic!("{}", message);
     }
 
@@ -36,14 +34,7 @@ fn expand_tokens_helper(
                 let replacement_val = get_value_from_path(&key_path, root);
 
                 replacement_val.map_or_else(
-                    || {
-                        debug!(
-                            "Failed to replace token at path {}. Current value: {:?}",
-                            key_path.join("."),
-                            val
-                        );
-                        format!("${{{}}}", key_path.join("."))
-                    },
+                    || format!("${{{}}}", key_path.join(".")),
                     |replacement_val| {
                         let key_path_str = key_path.join(".");
                         let replacement_expanded = expand_tokens_helper(
@@ -95,10 +86,6 @@ fn get_value_from_path(key_path: &[&str], root: &Value) -> Option<Value> {
         if let Value::Object(obj) = current_value {
             current_value = obj.get(*key)?;
         } else {
-            warn!(
-                "non-object value encountered at path {}. Current value: {current_value:?}",
-                key_path.join("."),
-            );
             return None;
         }
     }

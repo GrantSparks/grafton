@@ -20,11 +20,11 @@ pub use {
     axum_login::axum,
     error::Error,
     tracing,
-    util::{load_config_from_dir, ClientConfig, GraftonConfig, Logger},
+    util::{Config, Logger},
 };
 
-pub trait GraftonConfigProvider:
+pub trait ServerConfigProvider:
     'static + Send + Sync + DeserializeOwned + Serialize + std::fmt::Debug
 {
-    fn get_grafton_config(&self) -> &GraftonConfig;
+    fn get_server_config(&self) -> &Config;
 }

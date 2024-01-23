@@ -1,6 +1,9 @@
+use grafton_server::ServerConfigProvider;
+
 use {
     derivative::Derivative,
-    grafton_server::{GraftonConfig, GraftonConfigProvider},
+    grafton_config::{GraftonConfig, GraftonConfigProvider},
+    grafton_server::Config as ServerConfig,
     openapiv3::OpenAPI,
     serde::{Deserialize, Serialize},
 };
@@ -65,12 +68,18 @@ pub struct ChatGptPlugin {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Config {
     #[serde(flatten)]
-    pub base: GraftonConfig,
+    pub base: ServerConfig,
     pub chatgpt_plugin: ChatGptPlugin,
 }
 
 impl GraftonConfigProvider for Config {
     fn get_grafton_config(&self) -> &GraftonConfig {
+        self.base.get_grafton_config()
+    }
+}
+
+impl ServerConfigProvider for Config {
+    fn get_server_config(&self) -> &grafton_server::Config {
         &self.base
     }
 }

@@ -24,12 +24,12 @@ use crate::{
         router::protected,
         Backend,
     },
-    AuthSession, GraftonConfigProvider,
+    AuthSession, ServerConfigProvider,
 };
 
 pub struct ProtectedApp<C>
 where
-    C: GraftonConfigProvider,
+    C: ServerConfigProvider,
 {
     db: SqlitePool,
     oauth_clients: HashMap<String, BasicClient>,
@@ -41,7 +41,7 @@ where
 
 impl<C> ProtectedApp<C>
 where
-    C: GraftonConfigProvider,
+    C: ServerConfigProvider,
 {
     pub async fn new(
         app_ctx: Arc<Context<C>>,
@@ -50,7 +50,7 @@ where
     ) -> Result<Self, Error> {
         let mut oauth_clients = HashMap::new();
 
-        for (client_name, client_config) in &app_ctx.config.get_grafton_config().oauth_clients {
+        for (client_name, client_config) in &app_ctx.config.get_server_config().oauth_clients {
             debug!("Configuring oauth client: {}", client_name);
             let client_id = client_config.client_id.clone();
             let client_secret = client_config.client_secret.clone();
@@ -72,7 +72,7 @@ where
 
             let normalised_url = app_ctx
                 .config
-                .get_grafton_config()
+                .get_server_config()
                 .website
                 .format_public_server_url(&format!("/oauth/{client_name}/callback"));
 
@@ -114,7 +114,7 @@ where
             session_layer,
             login_url: app_ctx
                 .config
-                .get_grafton_config()
+                .get_server_config()
                 .website
                 .pages
                 .with_root()
@@ -122,7 +122,7 @@ where
             protected_router,
             protected_route: app_ctx
                 .config
-                .get_grafton_config()
+                .get_server_config()
                 .website
                 .pages
                 .with_root()

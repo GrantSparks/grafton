@@ -26,3 +26,6 @@ version = "1"
 
 [dependencies.grafton-server]
 path = "../../grafton-server"
+
+[dependencies.grafton-config]
+path = "../../grafton-config"

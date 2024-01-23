@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use {askama::Template, askama_axum::IntoResponse, serde::Deserialize};
 
 use crate::{
@@ -7,7 +9,7 @@ use crate::{
     },
     core::AxumRouter,
     tracing::error,
-    GraftonConfigProvider,
+    ServerConfigProvider,
 };
 
 pub const NEXT_URL_KEY: &str = "auth.next-url";
@@ -35,7 +37,7 @@ pub struct ProviderTemplate {
 
 pub fn router<C>() -> AxumRouter<C>
 where
-    C: GraftonConfigProvider,
+    C: ServerConfigProvider,
 {
     AxumRouter::new()
         .route("/login/:provider", post(self::post::login))
@@ -44,7 +46,6 @@ where
 }
 
 mod post {
-    use std::sync::Arc;
 
     use axum_login::tower_sessions::Session;
 
@@ -55,7 +56,7 @@ mod post {
         AuthSession, Error,
     };
 
-    use super::{error, GraftonConfigProvider, IntoResponse, NextUrl, Path, NEXT_URL_KEY};
+    use super::{error, Arc, IntoResponse, NextUrl, Path, ServerConfigProvider, NEXT_URL_KEY};
 
     pub async fn login<C>(
         auth_session: AuthSession,
@@ -65,7 +66,7 @@ mod post {
         Form(NextUrl { next }): Form<NextUrl>,
     ) -> Result<impl IntoResponse, Error>
     where
-        C: GraftonConfigProvider,
+        C: ServerConfigProvider,
     {
         match auth_session.backend.authorize_url(provider.clone()) {
             Ok((url, token)) => {
@@ -95,15 +96,13 @@ mod post {
 
 mod get {
 
-    use std::sync::Arc;
-
     use crate::{
         axum::extract::{Query, State},
         model::Context,
-        Error, GraftonConfigProvider,
+        Error,
     };
 
-    use super::{IntoResponse, Login, NextUrl, Path, ProviderTemplate};
+    use super::{Arc, IntoResponse, Login, NextUrl, Path, ProviderTemplate, ServerConfigProvider};
 
     pub async fn login<C>(
         Query(NextUrl { next }): Query<NextUrl>,
@@ -111,11 +110,11 @@ mod get {
         State(app_ctx): State<Arc<Context<C>>>,
     ) -> Result<Login, impl IntoResponse>
     where
-        C: GraftonConfigProvider,
+        C: ServerConfigProvider,
     {
         app_ctx
             .config
-            .get_grafton_config()
+            .get_server_config()
             .oauth_clients
             .get(&provider)
             .map_or_else(
@@ -136,11 +135,11 @@ mod get {
         State(app_ctx): State<Arc<Context<C>>>,
     ) -> Result<ProviderTemplate, Error>
     where
-        C: GraftonConfigProvider,
+        C: ServerConfigProvider,
     {
         let providers = app_ctx
             .config
-            .get_grafton_config()
+            .get_server_config()
             .oauth_clients
             .values()
             .map(|client| client.display_name.clone())

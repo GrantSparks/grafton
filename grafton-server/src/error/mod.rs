@@ -24,9 +24,6 @@ pub enum Error {
     #[error("Generic error: {0}")]
     GenericError(String),
 
-    #[error("General error: {0}")]
-    GeneralError(#[from] anyhow::Error),
-
     #[cfg(feature = "grpc")]
     #[error("gRPC error: {0}")]
     Grpc(#[from] Status),
@@ -56,9 +53,6 @@ pub enum Error {
 
     #[error("Invalid token URL: {0}")]
     InvalidTokenUrl(String),
-
-    #[error("Invalid config: {0}")]
-    ConfigError(String),
 
     #[error("I/O error: {0}")]
     IoError(#[from] io::Error),
@@ -166,14 +160,16 @@ impl From<PoisonError<MutexGuard<'_, Oso>>> for Error {
     }
 }
 
+impl From<grafton_config::Error> for Error {
+    fn from(err: grafton_config::Error) -> Self {
+        Self::GenericError(format!("Failed to load config: {err}"))
+    }
+}
+
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
         let (status, error_message) = match &self {
             Self::GenericError(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg.clone()),
-            Self::GeneralError(_) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "General error occurred".to_string(),
-            ),
             Self::SerializationError(msg) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("Failed to serialize session data: {msg}"),
