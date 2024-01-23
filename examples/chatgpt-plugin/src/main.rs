@@ -1,9 +1,8 @@
 mod plugin;
-use plugin::{build_chatgpt_plugin_router, build_todos_router, config::Config};
-
-use grafton_config::load_config_from_dir;
+use plugin::{build_chatgpt_plugin_router, build_todos_router, Config};
 
 use {
+    grafton_config::load_config_from_dir,
     grafton_server::{model::Context, tracing::info, AxumRouter, Builder, Error, Logger},
     tokio::signal,
 };

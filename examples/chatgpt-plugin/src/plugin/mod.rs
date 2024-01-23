@@ -10,7 +10,7 @@ mod specification;
 use specification::build_specification_router;
 
 pub mod config;
-pub use config::Info;
+pub use config::Config;
 
 use crate::{AppContext, AppRouter};
 

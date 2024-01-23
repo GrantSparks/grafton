@@ -8,6 +8,7 @@ The Grafton Machine Shed is a work in progress.  **This platform will not be sta
 
 We are currently working on the following features:
 - Basic http server (complete)
+- Config loading with token variable expansion (complete)
 - Multi-provider oauth2 login (in progress)
 - Role Based Access Control (in progress)
 

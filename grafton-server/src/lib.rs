@@ -20,7 +20,7 @@ pub use {
     axum_login::axum,
     error::Error,
     tracing,
-    util::{Config, Logger},
+    util::{Config, Logger, SslConfig},
 };
 
 pub trait ServerConfigProvider: TokenExpandingConfig {
