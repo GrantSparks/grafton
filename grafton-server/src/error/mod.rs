@@ -21,9 +21,6 @@ use tonic::{transport::Error as TonicTransportError, Status};
 
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("Generic error: {0}")]
-    GenericError(String),
-
     #[cfg(feature = "grpc")]
     #[error("gRPC error: {0}")]
     Grpc(#[from] Status),
@@ -39,20 +36,9 @@ pub enum Error {
     #[error("Tonic transport error: {0}")]
     TonicTransport(#[from] TonicTransportError),
 
+    #[cfg(feature = "rbac")]
     #[error("Mutex lock error: {0}")]
     MutexLockError(String),
-
-    #[error("Database connection error: {0}")]
-    DatabaseConnectionError(String),
-
-    #[error("Database migration error: {0}")]
-    DatabaseMigrationError(String),
-
-    #[error("Invalid authentication URL: {0}")]
-    InvalidAuthUrl(String),
-
-    #[error("Invalid token URL: {0}")]
-    InvalidTokenUrl(String),
 
     #[error("I/O error: {0}")]
     IoError(#[from] io::Error),
@@ -62,6 +48,9 @@ pub enum Error {
 
     #[error("SQLx error: {0}")]
     Sqlx(#[from] sqlx::Error),
+
+    #[error("SQLx migrate error: {0}")]
+    SqlxMigrate(#[from] MigrateError),
 
     #[error("Reqwest error: {0}")]
     Reqwest(#[from] reqwest::Error),
@@ -81,46 +70,14 @@ pub enum Error {
         cause: String,
     },
 
-    #[error("Invalid authentication URL for client {client_name} '{url}': {inner}")]
-    InvalidAuthUrlDetailed {
-        client_name: String,
-        url: String,
-        inner: ParseError,
-    },
-
-    #[error("Invalid token URL for {client_name} '{url}': {inner}")]
-    InvalidTokenUrlDetailed {
-        client_name: String,
-        url: String,
-        inner: ParseError,
-    },
-
-    #[error("Database connection error with '{conn_str}': {inner}")]
-    DatabaseConnectionErrorDetailed {
-        conn_str: String,
-        inner: sqlx::Error,
-    },
-
-    #[error("Database migration error during '{migration_details}': {inner}")]
-    DatabaseMigrationErrorDetailed {
-        migration_details: String,
-        inner: MigrateError,
-    },
+    #[error("Cannot parse URL")]
+    ParseError(#[from] ParseError),
 
     #[error("Invalid HTTP header value: {0}")]
     InvalidHttpHeaderValue(#[from] reqwest::header::InvalidHeaderValue),
 
     #[error("TLS configuration error: {0}")]
     TlsConfigError(#[from] RustlsError),
-
-    #[error("Invalid certificate")]
-    InvalidCertificate,
-
-    #[error("No private keys found in key file '{file_path}': {error}")]
-    NoPrivateKey { file_path: String, error: String },
-
-    #[error("Invalid private key in file '{file_path}': {error}")]
-    InvalidPrivateKey { file_path: String, error: String },
 
     #[error("Session state error: {0}")]
     SessionStateError(String),
@@ -149,8 +106,8 @@ pub enum Error {
     #[error("Failed to generate authorization URL: {0}")]
     AuthorizationUrlError(String),
 
-    #[error("Error rendering template: {0}")]
-    TemplateRenderingError(String),
+    #[error("Configuration error: {0}")]
+    ConfigError(#[from] grafton_config::Error),
 }
 
 #[cfg(feature = "rbac")]
@@ -160,16 +117,9 @@ impl From<PoisonError<MutexGuard<'_, Oso>>> for Error {
     }
 }
 
-impl From<grafton_config::Error> for Error {
-    fn from(err: grafton_config::Error) -> Self {
-        Self::GenericError(format!("Failed to load config: {err}"))
-    }
-}
-
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
         let (status, error_message) = match &self {
-            Self::GenericError(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg.clone()),
             Self::SerializationError(msg) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("Failed to serialize session data: {msg}"),
@@ -181,10 +131,6 @@ impl IntoResponse for Error {
             Self::ProviderNotFoundError(msg) => (
                 StatusCode::NOT_FOUND,
                 format!("OAuth provider not found: {msg}"),
-            ),
-            Self::TemplateRenderingError(msg) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Error rendering template: {msg}"),
             ),
             _ => (
                 StatusCode::INTERNAL_SERVER_ERROR,

@@ -55,20 +55,8 @@ where
             let client_id = client_config.client_id.clone();
             let client_secret = client_config.client_secret.clone();
 
-            let auth_url = AuthUrl::new(client_config.auth_uri.clone()).map_err(|e| {
-                Error::InvalidAuthUrlDetailed {
-                    url: client_config.auth_uri.clone(),
-                    inner: e,
-                    client_name: client_name.clone(),
-                }
-            })?;
-            let token_url = TokenUrl::new(client_config.token_uri.clone()).map_err(|e| {
-                Error::InvalidTokenUrlDetailed {
-                    url: client_config.token_uri.clone(),
-                    inner: e,
-                    client_name: client_name.clone(),
-                }
-            })?;
+            let auth_url = AuthUrl::new(client_config.auth_uri.clone())?;
+            let token_url = TokenUrl::new(client_config.token_uri.clone())?;
 
             let normalised_url = app_ctx
                 .config
@@ -76,10 +64,7 @@ where
                 .website
                 .format_public_server_url(&format!("/oauth/{client_name}/callback"));
 
-            let redirect_url = RedirectUrl::new(normalised_url).map_err(|e| {
-                error!("Error parsing redirect URL: {:?}", e);
-                Error::SerializationError(e.to_string())
-            })?;
+            let redirect_url = RedirectUrl::new(normalised_url)?;
 
             let client =
                 BasicClient::new(client_id, Some(client_secret), auth_url, Some(token_url))
@@ -89,22 +74,10 @@ where
             debug!("OAuth client configured: {}", client_name);
         }
 
-        let db = SqlitePool::connect(":memory:").await.map_err(|e| {
-            error!("Database connection error: {}", e);
-            Error::DatabaseConnectionErrorDetailed {
-                conn_str: ":memory:".to_string(),
-                inner: e,
-            }
-        })?;
+        let db = SqlitePool::connect(":memory:").await?;
 
         debug!("Running database migrations");
-        sqlx::migrate!().run(&db).await.map_err(|e| {
-            error!("Database migration error: {}", e);
-            Error::DatabaseMigrationErrorDetailed {
-                migration_details: "Initial migration".to_string(),
-                inner: e,
-            }
-        })?;
+        sqlx::migrate!().run(&db).await?;
 
         info!("App successfully initialized");
 
