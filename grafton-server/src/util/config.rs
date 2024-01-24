@@ -138,8 +138,7 @@ impl Website {
         )
     }
 
-    #[allow(clippy::missing_const_for_fn)]
-    fn get_protocol_and_port(&self) -> (&str, u16) {
+    const fn get_protocol_and_port(&self) -> (&str, u16) {
         if self.public_ssl_enabled {
             ("https", self.public_ports.https)
         } else {
@@ -149,15 +148,6 @@ impl Website {
 
     fn is_default_port(protocol: &str, port: u16) -> bool {
         matches!((protocol, port), ("http", 80) | ("https", 443))
-    }
-
-    #[allow(unused)]
-    fn format_hostname_and_port(&self, protocol: &str, port: u16) -> String {
-        if Self::is_default_port(protocol, port) {
-            format!("{}://{}", protocol, self.public_hostname)
-        } else {
-            format!("{}://{}:{}", protocol, self.public_hostname, port)
-        }
     }
 
     fn format_url(&self, protocol: &str, port: u16) -> Result<String, Error> {
@@ -533,37 +523,6 @@ mod tests {
 
         let result: Result<GraftonConfig, _> = serde_json::from_str(json);
         assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_format_hostname_and_port_default_http_port() {
-        let website = Website {
-            public_hostname: "example.com".into(),
-            public_ports: Ports::default(), // HTTP port 80
-            public_ssl_enabled: false,
-            ..Default::default()
-        };
-        assert_eq!(
-            website.format_hostname_and_port("http", website.public_ports.http),
-            "http://example.com"
-        );
-    }
-
-    #[test]
-    fn test_format_hostname_and_port_non_default_https_port() {
-        let website = Website {
-            public_hostname: "example.com".into(),
-            public_ports: Ports {
-                https: 8443,
-                ..Default::default()
-            },
-            public_ssl_enabled: true,
-            ..Default::default()
-        };
-        assert_eq!(
-            website.format_hostname_and_port("https", website.public_ports.https),
-            "https://example.com:8443"
-        );
     }
 
     #[derive(Debug, Serialize, Deserialize, Clone)]

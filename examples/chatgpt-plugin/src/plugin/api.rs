@@ -23,18 +23,12 @@ mod get {
 
     use crate::plugin::config::ChatGptPlugin;
 
-    use grafton_server::{
-        axum::{
-            extract::State,
-            response::{IntoResponse, Json},
-        },
-        tracing::debug,
+    use grafton_server::axum::{
+        extract::State,
+        response::{IntoResponse, Json},
     };
 
-    pub async fn plugin_handler(State(chatgpt_plugin): State<ChatGptPlugin>) -> impl IntoResponse {
-        let s = chatgpt_plugin.openapi_yaml;
-        debug!("{s}");
-
+    pub async fn plugin_handler(State(_chatgpt_plugin): State<ChatGptPlugin>) -> impl IntoResponse {
         let todos = vec![
             String::from("Collect underpants"),
             String::from("..."),

@@ -33,8 +33,7 @@ impl Logger {
     }
 }
 
-#[allow(clippy::missing_const_for_fn)]
-fn get_log_level_from_verbosity(verbosity: &Verbosity) -> Level {
+const fn get_log_level_from_verbosity(verbosity: &Verbosity) -> Level {
     match verbosity {
         Verbosity::Trace => Level::TRACE,
         Verbosity::Info => Level::INFO,

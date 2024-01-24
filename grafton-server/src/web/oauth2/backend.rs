@@ -25,16 +25,14 @@ struct UserInfo {
     username: Option<String>,
 }
 
-#[allow(clippy::redundant_pub_crate)]
 #[derive(Debug, Clone)]
-pub(crate) struct Backend {
+pub struct Backend {
     db: SqlitePool,
     oauth_clients: HashMap<String, BasicClient>,
 }
 
 impl Backend {
-    #[allow(clippy::missing_const_for_fn)]
-    pub fn new(db: SqlitePool, oauth_clients: HashMap<String, BasicClient>) -> Self {
+    pub const fn new(db: SqlitePool, oauth_clients: HashMap<String, BasicClient>) -> Self {
         Self { db, oauth_clients }
     }
 

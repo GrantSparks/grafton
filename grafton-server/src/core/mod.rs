@@ -4,5 +4,4 @@ use crate::{model::Context, web::Backend};
 
 pub type AxumRouter<C> = crate::axum::Router<Arc<Context<C>>>;
 
-#[allow(clippy::redundant_pub_crate)]
-pub(crate) type AuthSession = axum_login::AuthSession<Backend>;
+pub type AuthSession = axum_login::AuthSession<Backend>;
