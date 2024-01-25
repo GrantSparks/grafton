@@ -75,7 +75,7 @@ pub struct Config {
 }
 
 impl ServerConfigProvider for Config {
-    fn get_server_config(&self) -> &grafton_server::Config {
+    fn get_server_config(&self) -> &ServerConfig {
         &self.base
     }
 }
