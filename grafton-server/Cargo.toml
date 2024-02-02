@@ -94,7 +94,7 @@ version = "*"
 
 [dependencies.strum]
 features = ["derive"]
-version = "*"
+version = ">=0.26.1"
 
 [dependencies.tokio]
 features = ["signal", "rt-multi-thread"]

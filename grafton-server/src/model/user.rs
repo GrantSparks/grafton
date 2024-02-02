@@ -5,7 +5,7 @@ use {
 };
 
 #[cfg(feature = "rbac")]
-use strum::{Display, EnumString, EnumVariantNames};
+use strum::{Display, EnumString, VariantNames};
 
 use crate::new_secret_type;
 
@@ -19,7 +19,7 @@ use oso::PolarClass;
     Default,
     Display,
     EnumString,
-    EnumVariantNames,
+    VariantNames,
     Debug,
     Serialize,
     Deserialize,

@@ -11,7 +11,7 @@ use {
     oauth2::{ClientId, ClientSecret},
     serde::{Deserialize, Serialize},
     serde_json::{Map, Value},
-    strum::{Display, EnumString, EnumVariantNames},
+    strum::{Display, EnumString, VariantNames},
     url::Url,
 };
 
@@ -28,7 +28,7 @@ pub struct LoggerConfig {
 }
 
 #[derive(
-    Default, EnumString, EnumVariantNames, Debug, Serialize, Deserialize, Clone, PartialEq, Eq,
+    Default, EnumString, VariantNames, Debug, Serialize, Deserialize, Clone, PartialEq, Eq,
 )]
 #[strum(serialize_all = "snake_case")]
 pub enum Verbosity {
@@ -176,16 +176,7 @@ impl Website {
 }
 
 #[derive(
-    Default,
-    Display,
-    EnumString,
-    EnumVariantNames,
-    Debug,
-    Serialize,
-    Deserialize,
-    Clone,
-    PartialEq,
-    Eq,
+    Default, Display, EnumString, VariantNames, Debug, Serialize, Deserialize, Clone, PartialEq, Eq,
 )]
 #[strum(serialize_all = "snake_case")]
 pub enum SameSiteConfig {
