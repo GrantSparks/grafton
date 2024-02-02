@@ -1,6 +1,4 @@
-use std::net::IpAddr;
-use std::str::FromStr;
-use std::sync::Arc;
+use std::{net::IpAddr, str::FromStr as _, sync::Arc};
 
 use crate::{
     axum::Router,

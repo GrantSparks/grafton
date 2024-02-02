@@ -1,19 +1,54 @@
 #![allow(clippy::module_name_repetitions)]
 
-use grafton_config::{GraftonConfig, GraftonConfigProvider, TokenExpandingConfig};
+use std::{collections::HashMap, net::IpAddr, str::FromStr as _};
 
-use std::{collections::HashMap, net::IpAddr};
+use grafton_config::{GraftonConfig, GraftonConfigProvider, TokenExpandingConfig};
 
 use crate::Error;
 
 use {
     derivative::Derivative,
     oauth2::{ClientId, ClientSecret},
+    oxide_auth::primitives::{
+        prelude::*,
+        registrar::{ClientMap, IgnoreLocalPortUrl, RegisteredUrl},
+    },
     serde::{Deserialize, Serialize},
     serde_json::{Map, Value},
     strum::{Display, EnumString, VariantNames},
     url::Url,
 };
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct AuthClientConfig {
+    pub allowed_redirect_uris: Vec<String>,
+    pub client_secret: ClientSecret,
+}
+
+impl Default for AuthClientConfig {
+    fn default() -> Self {
+        Self {
+            allowed_redirect_uris: Vec::new(),
+            client_secret: ClientSecret::new(String::new()),
+        }
+    }
+}
+
+#[derive(Default, Serialize, Deserialize, Debug, Clone)]
+pub struct AuthServerConfig {
+    /// Url our clients must post to in order to get an access token.
+    pub token_url: String,
+
+    /// Url our clients must post to in order to refresh the access token.
+    pub refresh_url: String,
+
+    /// The url our clients must post to in order to obtain an authorization code.
+    pub authorize_url: String,
+
+    /// The registered clients who are allowed to authenticate using oauth
+    /// The key is the client_id
+    pub clients: HashMap<String, AuthClientConfig>,
+}
 
 #[derive(Default, Debug, Serialize, Deserialize, Clone)]
 #[serde(default)]
@@ -211,7 +246,7 @@ pub struct Ports {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ClientConfig {
+pub struct AuthProviderConfig {
     pub display_name: String,
     pub client_id: ClientId,
     pub client_secret: ClientSecret,
@@ -233,9 +268,10 @@ pub struct Config {
     pub website: Website,
     #[serde(default)]
     pub session: SessionConfig,
-    pub oauth_clients: HashMap<String, ClientConfig>,
+    pub oauth_providers: HashMap<String, AuthProviderConfig>,
     #[derivative(Default(value = "Vec::new()"))]
     pub oso_policy_files: Vec<String>,
+    pub oauth_server: AuthServerConfig,
 }
 
 impl GraftonConfigProvider for Config {
@@ -245,6 +281,50 @@ impl GraftonConfigProvider for Config {
 }
 
 impl TokenExpandingConfig for Config {}
+
+impl TryInto<ClientMap> for Config {
+    type Error = Error;
+
+    fn try_into(self) -> Result<ClientMap, Self::Error> {
+        let auth_server_config = &self.oauth_server;
+
+        let mut client_map = ClientMap::new();
+
+        for (client_id, client_config) in &auth_server_config.clients {
+            let redirect_uris: Result<Vec<RegisteredUrl>, Error> = client_config
+                .allowed_redirect_uris
+                .iter()
+                .map(|uri| {
+                    if uri.contains("localhost") {
+                        IgnoreLocalPortUrl::from_str(uri)
+                            .map(RegisteredUrl::IgnorePortOnLocalhost)
+                            .map_err(Error::from)
+                    } else {
+                        Url::parse(uri)
+                            .map(RegisteredUrl::Semantic)
+                            .map_err(Error::from)
+                    }
+                })
+                .collect();
+
+            let redirect_uris = redirect_uris?;
+
+            if let Some((first_uri, others)) = redirect_uris.split_first() {
+                let client = Client::confidential(
+                    client_id,
+                    first_uri.clone(),
+                    "default".parse::<Scope>().map_err(Error::from)?,
+                    client_config.client_secret.secret().as_bytes(),
+                )
+                .with_additional_redirect_uris(others.to_vec());
+
+                client_map.register_client(client);
+            }
+        }
+
+        Ok(client_map)
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -418,7 +498,7 @@ mod tests {
         let json = r#"
         {
             "run_mode": "test",
-            "oauth_clients": {
+            "oauth_providers": {
                 "github": {
                     "display_name": "GitHub",
                     "client_id": "github_id",
@@ -432,25 +512,25 @@ mod tests {
 
         let config: Config = serde_json::from_str(json).expect("Failed to deserialize");
         assert_eq!(
-            config.oauth_clients.get("github").unwrap().client_id,
+            config.oauth_providers.get("github").unwrap().client_id,
             ClientId::new("github_id".to_string())
         );
         assert_eq!(
-            config.oauth_clients.get("github").unwrap().auth_uri,
+            config.oauth_providers.get("github").unwrap().auth_uri,
             "http://localhost/callback"
         );
         assert_eq!(
-            config.oauth_clients.get("github").unwrap().token_uri,
+            config.oauth_providers.get("github").unwrap().token_uri,
             "http://localhost/token"
         );
     }
 
     #[test]
-    fn test_load_multiple_oauth_clients() {
+    fn test_load_multiple_oauth_providers() {
         let json = r#"
         {
             "run_mode": "test",
-            "oauth_clients": {
+            "oauth_providers": {
                 "github": {
                     "display_name": "GitHub",
                     "client_id": "github_id",
@@ -478,16 +558,16 @@ mod tests {
 
         let config: Config = serde_json::from_str(json).expect("Failed to deserialize");
         assert_eq!(
-            config.oauth_clients.get("github").unwrap().token_uri,
+            config.oauth_providers.get("github").unwrap().token_uri,
             "http://localhost/github/token"
         );
         assert_eq!(
-            config.oauth_clients.get("google").unwrap().token_uri,
+            config.oauth_providers.get("google").unwrap().token_uri,
             "http://localhost/google/token"
         );
 
         let userinfo_uri = config
-            .oauth_clients
+            .oauth_providers
             .get("google")
             .unwrap()
             .extra
@@ -504,7 +584,7 @@ mod tests {
         let json = r#"
         {
             "run_mode": "test",
-            "oauth_clients": {
+            "oauth_providers": {
                 "invalid_client": {
                     "client_id": "id_without_secret",
                     // missing fields
@@ -549,7 +629,7 @@ mod tests {
     
             [pages]
     
-            [oauth_clients]
+            [oauth_providers]
             google = { display_name = "Google", client_id = "YOUR GOOGLE CLIENT ID", client_secret = "YOUR GOOGLE CLIENT SECRET", auth_uri = "https://accounts.google.com/o/oauth2/auth", token_uri = "https://oauth2.googleapis.com/token" }
             github = { display_name = "GitHub", client_id = "xxx", client_secret = "xxx", auth_uri = "https://github.com/login/oauth/authorize", token_uri = "https://github.com/login/oauth/access_token" }
         "#;
@@ -622,7 +702,7 @@ mod tests {
 
         loaded_config_after_local_toml
             .get_server_config()
-            .oauth_clients
+            .oauth_providers
             .get("google")
             .map_or_else(
                 || {
@@ -639,7 +719,7 @@ mod tests {
 
         loaded_config_after_local_toml
             .get_server_config()
-            .oauth_clients
+            .oauth_providers
             .get("github")
             .map_or_else(
                 || {
@@ -650,5 +730,31 @@ mod tests {
                     assert_eq!(github_client.client_secret.secret(), "xxx");
                 },
             );
+    }
+
+    #[test]
+    fn test_auth_server_config_custom_initialization() {
+        let mut clients = HashMap::new();
+        clients.insert(
+            "client_identifier_given_to_example.com".to_string(),
+            AuthClientConfig {
+                allowed_redirect_uris: vec!["http://example.com/callback".to_string()],
+                client_secret: ClientSecret::new("secret123".to_string()),
+            },
+        );
+
+        let config = AuthServerConfig {
+            token_url: "http://localhost/token".to_string(),
+            refresh_url: "http://localhost/refresh".to_string(),
+            authorize_url: "http://localhost/authorize".to_string(),
+            clients,
+        };
+
+        assert_eq!(config.token_url, "http://localhost/token");
+        assert_eq!(config.refresh_url, "http://localhost/refresh");
+        assert_eq!(config.authorize_url, "http://localhost/authorize");
+        assert!(config
+            .clients
+            .contains_key("client_identifier_given_to_example.com"));
     }
 }

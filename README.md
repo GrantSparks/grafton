@@ -1,22 +1,28 @@
 # Welcome to the Grafton Machine Shed
 
-The Grafton Machine Shed API Server is a batteries-included platform written in the Rust language and designed to serve multiple APIs, protocols and services. Our goal is to provide a robust, efficient, and flexible platform for hosting a wide range of applications that collaborate on the internet particularly with AI Agents and LLMs.  For more information about Grafton Machine Shed projects and capabilities, visit our [website](https://www.grafton.ai).
+The Grafton Machine Shed API Server is a batteries-included platform written in the Rust language and designed to serve multiple APIs, protocols and services. Our goal is to provide a robust, efficient, and flexible platform for hosting a wide range of applications that collaborate on the internet particularly with AI Agents and LLMs. For more information about Grafton Machine Shed projects and capabilities, visit our [website](https://www.grafton.ai).
 
 ## Roadmap
 
-The Grafton Machine Shed is a work in progress.  **This platform will not be stable enough to use in third-party projects until a future release.**
+The Grafton Machine Shed is a work in progress. **DO NOT USE! This platform will not be stable enough to use in third-party projects until a future release. THIS MESSAGE WILL BE REMOVED AFTER THE FIRST PUBLIC RELEASE IS PUBLISHED**
 
 We are currently working on the following features:
-- Basic http server (complete)
-- Config loading with token variable expansion (complete)
-- Multi-provider oauth2 login (in progress)
-- Role Based Access Control (in progress)
+
+- [x] Basic http server (complete)
+- [x] Config loading with token variable expansion (complete)
+- [ ] Multi-provider oauth2 login for end users of API clients (in progress)
+- [ ] Role Based Access Control (in progress)
 
 Planned features and API's: (coming soon)
-  - REST & Websocket
-  - GraphQL
-  - gRPC
-  - Multi-modal realtime streaming
+
+- [ ] REST & Websocket
+- [ ] GraphQL
+- [ ] gRPC
+- [ ] Multi-modal realtime streaming
+
+## Developer Documentation
+
+Specification of oauth proxy implementation for downstream clients. [docs/oauth.md](docs/oauth.md)
 
 ## Licensing
 
@@ -28,11 +34,11 @@ Unless explicitly stated otherwise, all files in this repository are licensed un
 
 #### Key Features of the Apache License 2.0:
 
-* **Permissive License**: Enables free commercial and non-commercial use, distribution, and modification of the software without requiring source code access. Allows combining with other open source licenses.
+- **Permissive License**: Enables free commercial and non-commercial use, distribution, and modification of the software without requiring source code access. Allows combining with other open source licenses.
 
-* **Explicit Patent License**: Grants an express patent license from all contributors to users, protecting both parties from patent infringement claims related to the software.  
+- **Explicit Patent License**: Grants an express patent license from all contributors to users, protecting both parties from patent infringement claims related to the software.
 
-* **Patent Retaliation Provision**: Terminates the license for any party that files a patent infringement lawsuit alleging that the software infringes a patent, thus protecting users and contributors.
+- **Patent Retaliation Provision**: Terminates the license for any party that files a patent infringement lawsuit alleging that the software infringes a patent, thus protecting users and contributors.
 
 ### Commercial License
 

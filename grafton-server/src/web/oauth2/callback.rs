@@ -52,7 +52,7 @@ mod get {
             .map_err(|_| Error::SessionStateError("Failed to retrieve CSRF state".to_string()))?
             .ok_or(Error::MissingCSRFState)?;
 
-        if let Some(oauth_client) = config.oauth_clients.get(&provider) {
+        if let Some(oauth_client) = config.oauth_providers.get(&provider) {
             if let Some(userinfo_uri) = oauth_client.extra.get("userinfo_uri") {
                 let userinfo_uri = userinfo_uri.as_str().unwrap().to_string();
                 let creds = Credentials {
@@ -72,7 +72,7 @@ mod get {
                         warn!("Invalid CSRF state, authentication failed");
 
                         let providers = config
-                            .oauth_clients
+                            .oauth_providers
                             .values()
                             .map(|client| client.display_name.clone())
                             .collect();

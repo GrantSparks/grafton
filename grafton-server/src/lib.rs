@@ -17,7 +17,7 @@ mod rbac;
 
 pub use {
     app::Builder,
-    axum_login::axum,
+    axum,
     error::Error,
     tracing,
     util::{Config, Logger, SslConfig},

@@ -111,6 +111,12 @@ pub enum Error {
 
     #[error("Configuration error: {0}")]
     ConfigError(#[from] grafton_config::Error),
+
+    #[error("Failed to parse scope: {0}")]
+    ParseScopeError(#[from] oxide_auth::primitives::scope::ParseScopeErr),
+
+    #[error("Registrar information missing")]
+    MissingRegistrar,
 }
 
 #[cfg(feature = "rbac")]

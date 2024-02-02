@@ -21,9 +21,6 @@ include = [
     "src/**/*",
 ]
 
-[profile.dev.build-override]
-opt-level = 3
-
 [features]
 default = ["rbac", "graphql"]
 graphql = []
@@ -35,6 +32,8 @@ askama_axum = "*"
 derivative = "2"
 lazy_static = "1"
 oauth2 = "4"
+oxide-auth = "*"
+oxide-auth-axum = "*"
 regex = "1"
 rustls-pemfile = "2"
 serde_json = "1"
@@ -44,6 +43,7 @@ tokio-rustls = "*"
 tracing = "*"
 tracing-appender = "*"
 tracing-subscriber = "*"
+typed-builder = "*"
 url = "2"
 
 [dependencies.grafton-config]
@@ -54,7 +54,8 @@ features = ["with-axum"]
 version = "*"
 
 [dependencies.axum]
-features = ["macros"] # Hack to enable macros in axum-login crate dependency
+features = ["macros", "json"]
+version = "0.7.4"
 
 [dependencies.axum-login]
 version = "*"

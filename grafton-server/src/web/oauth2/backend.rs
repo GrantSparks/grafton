@@ -28,16 +28,19 @@ struct UserInfo {
 #[derive(Debug, Clone)]
 pub struct Backend {
     db: SqlitePool,
-    oauth_clients: HashMap<String, BasicClient>,
+    oauth_providers: HashMap<String, BasicClient>,
 }
 
 impl Backend {
-    pub const fn new(db: SqlitePool, oauth_clients: HashMap<String, BasicClient>) -> Self {
-        Self { db, oauth_clients }
+    pub const fn new(db: SqlitePool, oauth_providers: HashMap<String, BasicClient>) -> Self {
+        Self {
+            db,
+            oauth_providers,
+        }
     }
 
     pub fn authorize_url(&self, provider: String) -> Result<(Url, CsrfToken), Error> {
-        self.oauth_clients.get(&provider).map_or_else(
+        self.oauth_providers.get(&provider).map_or_else(
             || Err(Error::ClientConfigNotFound(provider)),
             |oauth_client| {
                 let csrf_token = CsrfToken::new_random();
@@ -76,7 +79,7 @@ impl AuthnBackend for Backend {
             return Ok(None);
         };
 
-        if let Some(oauth_client) = self.oauth_clients.get(&creds.provider) {
+        if let Some(oauth_client) = self.oauth_providers.get(&creds.provider) {
             // Use oauth_client for the token exchange
             let token_res = oauth_client
                 .exchange_code(AuthorizationCode::new(creds.code))

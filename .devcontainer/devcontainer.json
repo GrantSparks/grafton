@@ -30,11 +30,13 @@
 "customizations": {
 	"vscode": {
 		"extensions": [
-			"vadimcn.vscode-lldb",
-			"serayuzgur.crates",
-			"tamasfe.even-better-toml",
-			"rust-lang.rust-analyzer"
-		]
+      "vadimcn.vscode-lldb",
+      "serayuzgur.crates",
+      "tamasfe.even-better-toml",
+      "rust-lang.rust-analyzer",
+      "bpruitt-goddard.mermaid-markdown-syntax-highlighting",
+      "bierner.markdown-mermaid"
+    ]
 	}
 }
 }

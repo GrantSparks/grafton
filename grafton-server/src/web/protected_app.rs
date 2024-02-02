@@ -32,7 +32,7 @@ where
     C: ServerConfigProvider,
 {
     db: SqlitePool,
-    oauth_clients: HashMap<String, BasicClient>,
+    oauth_providers: HashMap<String, BasicClient>,
     session_layer: SessionManagerLayer<MemoryStore>,
     login_url: String,
     protected_router: Option<AxumRouter<C>>,
@@ -48,9 +48,9 @@ where
         session_layer: SessionManagerLayer<MemoryStore>,
         protected_router: Option<AxumRouter<C>>,
     ) -> Result<Self, Error> {
-        let mut oauth_clients = HashMap::new();
+        let mut oauth_providers = HashMap::new();
 
-        for (client_name, client_config) in &app_ctx.config.get_server_config().oauth_clients {
+        for (client_name, client_config) in &app_ctx.config.get_server_config().oauth_providers {
             debug!("Configuring oauth client: {}", client_name);
             let client_id = client_config.client_id.clone();
             let client_secret = client_config.client_secret.clone();
@@ -70,7 +70,7 @@ where
                 BasicClient::new(client_id, Some(client_secret), auth_url, Some(token_url))
                     .set_redirect_uri(redirect_url);
 
-            oauth_clients.insert(client_name.clone(), client);
+            oauth_providers.insert(client_name.clone(), client);
             debug!("OAuth client configured: {}", client_name);
         }
 
@@ -83,7 +83,7 @@ where
 
         Ok(Self {
             db,
-            oauth_clients,
+            oauth_providers,
             session_layer,
             login_url: app_ctx
                 .config
@@ -110,7 +110,7 @@ where
         //
         // This combines the session layer with our backend to establish the auth
         // service which will provide the auth session as a request extension.
-        let backend = Backend::new(self.db.clone(), self.oauth_clients.clone());
+        let backend = Backend::new(self.db.clone(), self.oauth_providers.clone());
         let auth_layer = AuthManagerLayerBuilder::new(backend, self.session_layer).build();
 
         let login_url = Arc::new(self.login_url);

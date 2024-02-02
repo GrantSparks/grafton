@@ -102,7 +102,7 @@ mod get {
         Path(provider): Path<String>,
         State(config): State<Config>,
     ) -> Result<Login, impl IntoResponse> {
-        config.oauth_clients.get(&provider).map_or_else(
+        config.oauth_providers.get(&provider).map_or_else(
             || Err(Error::ProviderNotFoundError(provider)),
             |client| {
                 let provider_name = &client.display_name;
@@ -120,7 +120,7 @@ mod get {
         State(config): State<Config>,
     ) -> Result<ProviderTemplate, Error> {
         let providers = config
-            .oauth_clients
+            .oauth_providers
             .values()
             .map(|client| client.display_name.clone())
             .collect();

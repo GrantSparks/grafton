@@ -1,7 +1,19 @@
 # You can override these default settings with a local.toml file. 
 # You can also load even more overrides from a toml file with the same name as the run_mode.  e.g. dev.toml
+#
+# DO NOT STORE SECRETS IN THIS FILE!  INSTEAD CREATE YOUR OWN local.toml or run mode toml FILE AND OVERRIDE THESE SETTINGS THERE.
+#
+# e.g., to override the secrets for oauth clients, create a local.toml file with the following contents:
+#
+# [oauth_providers]
+# google = { client_id = "YOUR GOOGLE CLIENT ID", client_secret = "YOUR GOOGLE CLIENT SECRET" }
+# github = { client_id = "xxx", client_secret = "xxx" }
+#
+# To override a specific setting only for a particular run mode, create a toml file with the same name as the run_mode.  e.g. Create a file called dev.toml if the run_mode is "dev". 
+# The run mode config file will always be loaded *last* and override any other settings including any from default.toml or local.toml (other than the run_mode setting itself!)
 
-# To override run_mode you can define it in the RUN_MODE environment variable instead of here.  You can't override it using local.toml or any other file.
+# To override run_mode you can define the RUN_MODE environment variable instead of changing it here.  
+# run_mode is the only value that you can't override using local.toml or any other file.  It has to be either changed here, or defined as an environment variable to override this setting.
 run_mode = "dev"
 
 [website]
@@ -13,20 +25,20 @@ web_root = "examples/chatgpt-plugin/public/www"
 [website.pages]
 protected_home = "/chatgpt-plugin/api/todos"
 
+[oauth_server]
+token_url = "https://${website.public_hostname}/auth/token"
+refresh_url = "https://${website.public_hostname}/auth/refresh"
+authorization_url = "https://${website.public_hostname}/auth/auth"
+
+[oauth_server.clients]
+"create_a_client_id_for_chatgpt" = { client_secret = "create_a_secret_for_chatgpt", allowed_redirect_uris = [
+] }
+
 [session]
 
 [routes]
 
-#
-# DO NOT STORE SECRETS IN THIS FILE!  INSTEAD CREATE YOUR OWN local.toml FILE AND OVERRIDE THESE SETTINGS THERE.
-#
-# e.g., to override the secrets for oauth clients, create a local.toml file with the following contents:
-#
-# [oauth_clients]
-# google = { client_id = "YOUR GOOGLE CLIENT ID", client_secret = "YOUR GOOGLE CLIENT SECRET" }
-# github = { client_id = "xxx", client_secret = "xxx" }
-#
-[oauth_clients]
+[oauth_providers]
 google = { display_name = "Google", client_id = "YOUR GOOGLE CLIENT ID", client_secret = "YOUR GOOGLE CLIENT SECRET", auth_uri = "https://accounts.google.com/o/oauth2/auth", token_uri = "https://oauth2.googleapis.com/token", extra = { userinfo_uri = "https://www.googleapis.com/oauth2/v3/userinfo" } }
 github = { display_name = "GitHub", client_id = "xxx", client_secret = "xxx", auth_uri = "https://github.com/login/oauth/authorize", token_uri = "https://github.com/login/oauth/access_token", extra = { userinfo_uri = "https://api.github.com/user" } }
 
