@@ -17,6 +17,9 @@ elif [ "$#" -gt 1 ]; then
     usage
 fi
 
+# Start time
+start_time=$(date +%s)
+
 # Delete the pdf directory if it exists
 if [ -d "$target_directory/pdf" ]; then
     echo "Deleting existing PDF directory..."
@@ -75,3 +78,10 @@ for doc_dir in "$target_directory"/doc/*; do
 done
 
 echo "All documentation has been converted to PDF."
+
+# End time
+end_time=$(date +%s)
+
+# Calculate and print the time taken
+time_taken=$((end_time - start_time))
+echo "Time taken: $time_taken seconds"
