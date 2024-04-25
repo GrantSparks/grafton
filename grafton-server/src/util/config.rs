@@ -136,13 +136,13 @@ pub struct Website {
     pub bind_address: IpAddr,
 
     #[derivative(Default)]
-    pub bind_ports: Ports,
+    pub bind_ports: Port,
 
     #[derivative(Default(value = "\"localhost\".into()"))]
     pub public_hostname: String,
 
     #[derivative(Default)]
-    pub public_ports: Ports,
+    pub public_ports: Port,
 
     #[derivative(Default(value = "false"))]
     pub public_ssl_enabled: bool,
@@ -182,7 +182,13 @@ impl Website {
     }
 
     fn is_default_port(protocol: &str, port: u16) -> bool {
-        matches!((protocol, port), ("http", 80) | ("https", 443))
+        let defaults = Port::default();
+        match protocol {
+            "http" => port == defaults.http,
+            "https" => port == defaults.https,
+            "grpc" => port == defaults.grpc,
+            _ => false,
+        }
     }
 
     fn format_url(&self, protocol: &str, port: u16) -> Result<String, Error> {
@@ -236,7 +242,7 @@ pub struct SslConfig {
 #[derive(Debug, Serialize, Deserialize, Derivative, Clone)]
 #[derivative(Default)]
 #[serde(default)]
-pub struct Ports {
+pub struct Port {
     #[derivative(Default(value = "80"))]
     pub http: u16,
     #[derivative(Default(value = "443"))]
@@ -394,7 +400,7 @@ mod tests {
     ) -> Website {
         Website {
             public_ssl_enabled: ssl_enabled,
-            public_ports: Ports {
+            public_ports: Port {
                 http: http_port,
                 https: https_port,
                 grpc: Default::default(),
@@ -756,5 +762,46 @@ mod tests {
         assert!(config
             .clients
             .contains_key("client_identifier_given_to_example.com"));
+    }
+
+    #[cfg(test)]
+    #[test]
+    fn test_is_default_port_http_default() {
+        assert!(
+            Website::is_default_port("http", 80),
+            "HTTP default port should be recognized as default."
+        );
+    }
+
+    #[test]
+    fn test_is_default_port_https_default() {
+        assert!(
+            Website::is_default_port("https", 443),
+            "HTTPS default port should be recognized as default."
+        );
+    }
+
+    #[test]
+    fn test_is_default_port_http_non_default() {
+        assert!(
+            !Website::is_default_port("http", 8080),
+            "HTTP non-default port should not be recognized as default."
+        );
+    }
+
+    #[test]
+    fn test_is_default_port_https_non_default() {
+        assert!(
+            !Website::is_default_port("https", 8443),
+            "HTTPS non-default port should not be recognized as default."
+        );
+    }
+
+    #[test]
+    fn test_is_default_port_unrecognized_protocol() {
+        assert!(
+            !Website::is_default_port("ftp", 21),
+            "Unrecognized protocol should not have a default port."
+        );
     }
 }
