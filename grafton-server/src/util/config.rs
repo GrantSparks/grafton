@@ -181,7 +181,7 @@ impl Website {
         }
     }
 
-    fn is_default_port(protocol: &str, port: u16) -> bool {
+    pub fn is_default_port(protocol: &str, port: u16) -> bool {
         let defaults = Port::default();
         match protocol {
             "http" => port == defaults.http,
@@ -341,25 +341,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_base_prepend() {
-        let pages = Pages {
-            root: "/api".to_string(),
-            public_home: "home".to_string(),
-            public_error: "/error".to_string(),
-            public_login: "login".to_string(),
-            protected_home: "protected".to_string(),
-        };
-
-        let updated_pages = pages.with_root();
-        assert_eq!(updated_pages.public_home, "/api/home");
-        assert_eq!(updated_pages.public_error, "/api/error");
-        assert_eq!(updated_pages.public_login, "/api/login");
-        assert_eq!(updated_pages.protected_home, "/api/protected");
-    }
-
-    #[test]
-    fn test_base_prepend_with_trailing_slash() {
-        let pages = Pages {
+    fn test_base_prepend_with_and_without_trailing_slash() {
+        let pages_with_slash = Pages {
             root: "/api/".to_string(),
             public_home: "home".to_string(),
             public_error: "error".to_string(),
@@ -367,15 +350,29 @@ mod tests {
             protected_home: "protected".to_string(),
         };
 
-        let updated_pages = pages.with_root();
-        assert_eq!(updated_pages.public_home, "/api/home");
-        assert_eq!(updated_pages.public_error, "/api/error");
-        assert_eq!(updated_pages.public_login, "/api/login");
-        assert_eq!(updated_pages.protected_home, "/api/protected");
+        let updated_pages_with_slash = pages_with_slash.with_root();
+        assert_eq!(updated_pages_with_slash.public_home, "/api/home");
+        assert_eq!(updated_pages_with_slash.public_error, "/api/error");
+        assert_eq!(updated_pages_with_slash.public_login, "/api/login");
+        assert_eq!(updated_pages_with_slash.protected_home, "/api/protected");
+
+        let pages_without_slash = Pages {
+            root: "/api".to_string(),
+            public_home: "home".to_string(),
+            public_error: "error".to_string(),
+            public_login: "login".to_string(),
+            protected_home: "protected".to_string(),
+        };
+
+        let updated_pages_without_slash = pages_without_slash.with_root();
+        assert_eq!(updated_pages_without_slash.public_home, "/api/home");
+        assert_eq!(updated_pages_without_slash.public_error, "/api/error");
+        assert_eq!(updated_pages_without_slash.public_login, "/api/login");
+        assert_eq!(updated_pages_without_slash.protected_home, "/api/protected");
     }
 
     #[test]
-    fn test_base_prepend_with_empty_and_root_pages() {
+    fn test_base_prepend_with_special_cases() {
         let pages = Pages {
             root: "/".to_string(),
             public_home: String::new(),
@@ -803,5 +800,97 @@ mod tests {
             !Website::is_default_port("ftp", 21),
             "Unrecognized protocol should not have a default port."
         );
+    }
+
+    #[test]
+    fn test_format_url_with_default_http_port() {
+        let website = Website {
+            public_hostname: "example.com".into(),
+            public_ports: Port {
+                http: 80,
+                https: 443,
+                grpc: 9339,
+            },
+            public_ssl_enabled: false,
+            ..Default::default()
+        };
+        let url = website
+            .format_url("http", website.public_ports.http)
+            .unwrap();
+        assert_eq!(url, "http://example.com");
+    }
+
+    #[test]
+    fn test_format_url_with_non_default_http_port() {
+        let website = Website {
+            public_hostname: "example.com".into(),
+            public_ports: Port {
+                http: 8080,
+                https: 443,
+                grpc: 9339,
+            },
+            public_ssl_enabled: false,
+            ..Default::default()
+        };
+        let url = website
+            .format_url("http", website.public_ports.http)
+            .unwrap();
+        assert_eq!(url, "http://example.com:8080");
+    }
+
+    #[test]
+    fn test_format_url_with_default_https_port() {
+        let website = Website {
+            public_hostname: "example.com".into(),
+            public_ports: Port {
+                http: 80,
+                https: 443,
+                grpc: 9339,
+            },
+            public_ssl_enabled: true,
+            ..Default::default()
+        };
+        let url = website
+            .format_url("https", website.public_ports.https)
+            .unwrap();
+        assert_eq!(url, "https://example.com");
+    }
+
+    #[test]
+    fn default_website_config() {
+        let default_website = Website::default();
+        assert_eq!(default_website.public_hostname, "localhost");
+        assert!(!default_website.public_ssl_enabled);
+        assert_eq!(default_website.public_ports.http, 80);
+    }
+
+    #[test]
+    fn default_auth_server_config() {
+        let default_auth_server = AuthServerConfig::default();
+        assert!(default_auth_server.clients.is_empty());
+        assert_eq!(default_auth_server.token_url, "");
+    }
+
+    #[test]
+    fn test_normalize_slash_variations() {
+        assert_eq!(normalize_slash("api"), "api/");
+        assert_eq!(normalize_slash("api/"), "api/");
+    }
+
+    #[test]
+    fn test_join_paths_variations() {
+        assert_eq!(join_paths("/api", "endpoint"), "/api/endpoint");
+        assert_eq!(join_paths("/api/", "/endpoint"), "/api/endpoint");
+    }
+
+    #[test]
+    fn test_deserialization_error_for_incomplete_json() {
+        let incomplete_json = r#"{
+            "token_url": "http://localhost/token"
+            // Missing refresh_url and authorize_url
+        }"#;
+
+        let result: Result<AuthServerConfig, _> = serde_json::from_str(incomplete_json);
+        assert!(result.is_err(), "Should error on incomplete JSON");
     }
 }
