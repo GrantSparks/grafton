@@ -28,7 +28,7 @@ protected_home = "/chatgpt-plugin/api/todos"
 [oauth_server]
 token_url = "https://${website.public_hostname}/auth/token"
 refresh_url = "https://${website.public_hostname}/auth/refresh"
-authorization_url = "https://${website.public_hostname}/auth/auth"
+authorize_url = "https://${website.public_hostname}/auth/auth"
 
 [oauth_server.clients]
 "create_a_client_id_for_chatgpt" = { client_secret = "create_a_secret_for_chatgpt", allowed_redirect_uris = [
