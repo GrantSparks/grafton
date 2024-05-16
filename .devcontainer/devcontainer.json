@@ -33,7 +33,8 @@
         "tamasfe.even-better-toml",
         "rust-lang.rust-analyzer",
         "bpruitt-goddard.mermaid-markdown-syntax-highlighting",
-        "bierner.markdown-mermaid"
+        "bierner.markdown-mermaid",
+        "mtxr.sqltools"
       ]
     }
   }

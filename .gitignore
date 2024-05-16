@@ -20,4 +20,3 @@ Cargo.lock
 **/test.toml
 **/prod.toml
 *.zip
-.vscode/
