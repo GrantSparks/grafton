@@ -46,7 +46,7 @@ pub struct AuthServerConfig {
     pub authorize_url: String,
 
     /// The registered clients who are allowed to authenticate using oauth
-    /// The key is the client_id
+    /// The key is the `client_id`
     pub clients: HashMap<String, AuthClientConfig>,
 }
 
