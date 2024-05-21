@@ -117,6 +117,9 @@ pub enum Error {
 
     #[error("Registrar information missing")]
     MissingRegistrar,
+
+    #[error("Invalid 'next' URL parameter: {0}")]
+    InvalidNextUrl(String),
 }
 
 #[cfg(feature = "rbac")]
