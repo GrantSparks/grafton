@@ -20,6 +20,8 @@ where
 }
 
 mod get {
+    use url::Url;
+
     use crate::{
         axum::extract::State,
         web::{
@@ -56,7 +58,7 @@ mod get {
             if let Some(userinfo_uri) = oauth_client.extra.get("userinfo_uri") {
                 let userinfo_uri = userinfo_uri.as_str().unwrap().to_string();
                 let creds = Credentials {
-                    code,
+                    code: code.clone(),
                     old_state,
                     new_state,
                     provider,
@@ -110,9 +112,20 @@ mod get {
                 }
 
                 match session.remove::<String>(NEXT_URL_KEY).await {
-                    Ok(Some(next)) if !next.is_empty() => Ok(Redirect::to(&next).into_response()),
+                    Ok(Some(next)) if !next.is_empty() => {
+                        // Parse the next URL and append the code parameter
+                        if let Ok(mut url) = Url::parse(&next) {
+                            url.query_pairs_mut().append_pair("code", &code);
+                            Ok(Redirect::to(url.as_str()).into_response())
+                        } else {
+                            // If parsing the URL fails, log the error and redirect to the default login page
+                            error!("Invalid URL in session: {}", next);
+                            Ok(Redirect::to(&config.website.pages.with_root().public_login)
+                                .into_response())
+                        }
+                    }
                     Ok(Some(_) | None) => {
-                        Ok(Redirect::to(&config.website.pages.with_root().public_home)
+                        Ok(Redirect::to(&config.website.pages.with_root().public_login)
                             .into_response())
                     }
                     Err(e) => {

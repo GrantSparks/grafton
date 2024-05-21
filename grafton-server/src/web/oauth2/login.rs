@@ -1,4 +1,10 @@
-use {askama::Template, askama_axum::IntoResponse, serde::Deserialize};
+use super::AuthzReq;
+
+use {
+    askama::Template,
+    askama_axum::IntoResponse,
+    serde::{Deserialize, Serialize},
+};
 
 use crate::{
     axum::{
@@ -17,6 +23,21 @@ pub struct NextUrl {
     next: String,
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+pub struct OpenAiAuthParams {
+    grant_type: String,
+    client_id: String,
+    client_secret: String,
+    code: String,
+    redirect_uri: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+pub enum NextOrAuthzReq {
+    NextUrl(NextUrl),
+    AuthzReq(AuthzReq),
+}
 #[derive(Template)]
 #[template(path = "login.html")]
 pub struct Login {
@@ -41,11 +62,16 @@ where
         .route("/login/:provider", post(self::post::login))
         .route("/login/:provider", get(self::get::login))
         .route("/login", get(self::get::choose_provider))
+        .route("/oauth/auth", get(self::get::choose_provider))
+        .route("/oauth/token", post(self::post::get_access_token))
 }
 
 mod post {
 
+    use axum::Json;
     use axum_login::tower_sessions::Session;
+    use serde_json::json;
+    use tracing::info;
 
     use crate::{
         axum::{extract::State, response::Redirect, Form},
@@ -53,7 +79,7 @@ mod post {
         AuthSession, Error,
     };
 
-    use super::{error, Config, IntoResponse, NextUrl, Path, NEXT_URL_KEY};
+    use super::{error, Config, IntoResponse, NextUrl, OpenAiAuthParams, Path, NEXT_URL_KEY};
 
     pub async fn login(
         auth_session: AuthSession,
@@ -86,16 +112,42 @@ mod post {
             }
         }
     }
+
+    pub async fn get_access_token(
+        State(_config): State<Config>,
+        Form(OpenAiAuthParams {
+            grant_type,
+            client_id,
+            client_secret,
+            code,
+            redirect_uri,
+        }): Form<OpenAiAuthParams>,
+    ) -> Result<impl IntoResponse, Error> {
+        info!("{}", format!(
+            "Received access token request with the following parameters: client_id={}, client_secret={}, grant_type={}, code={:?}, redirect_uri={}",
+            client_id, client_secret, grant_type, code, redirect_uri
+        ));
+
+        let response_body = json!({
+            "access_token": "example_token",
+            "token_type": "bearer",
+            "refresh_token": "example_token",
+            "expires_in": 59,
+        });
+
+        Ok(Json(response_body))
+    }
 }
 
 mod get {
 
     use crate::{
         axum::extract::{Query, State},
+        web::oauth2::AuthzReq,
         Error,
     };
 
-    use super::{Config, IntoResponse, Login, NextUrl, Path, ProviderTemplate};
+    use super::{Config, IntoResponse, Login, NextOrAuthzReq, NextUrl, Path, ProviderTemplate};
 
     pub async fn login(
         Query(NextUrl { next }): Query<NextUrl>,
@@ -116,7 +168,7 @@ mod get {
     }
 
     pub async fn choose_provider(
-        Query(NextUrl { next }): Query<NextUrl>,
+        Query(next_or_authz): Query<NextOrAuthzReq>,
         State(config): State<Config>,
     ) -> Result<ProviderTemplate, Error> {
         let providers = config
@@ -124,6 +176,18 @@ mod get {
             .values()
             .map(|client| client.display_name.clone())
             .collect();
+
+        let next = match next_or_authz {
+            NextOrAuthzReq::NextUrl(NextUrl { next }) => next,
+            NextOrAuthzReq::AuthzReq(AuthzReq {
+                redirect_uri,
+                state,
+                ..
+            }) => {
+                let separator = if redirect_uri.contains('?') { '&' } else { '?' };
+                format!("{}{}state={}", redirect_uri, separator, state.secret())
+            }
+        };
 
         Ok(ProviderTemplate {
             message: None,

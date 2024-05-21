@@ -22,11 +22,13 @@ This document describes the authentication and authorization process between dow
 
         [grafton_auth_url]?response_type=code&client_id=[client_id]&scope=[scope]&state=xyz123&redirect_uri=https%3A%2F%2Fchat.openai.com%2Faip%2F[plugin_id]%2Foauth%2Fcallback
 
-2.  **Upstream Provider Redirection**: `grafton-server` validates the request, creates a state parameter for CSRF protection, and redirects users to the upstream provider for authorization. The client's downstream redirect_uri is stored in the session to be used later amd the grafton-server's upstream callback endpoint (/oauth/callback) is used as the redirect_uri for the upstream provider.
+2. The authorization endpoint returns a web page with login buttons for each of the supported upstream providers. The user presses the button for their desired upstream provider which submits a POST request to the grafton-server's /login/:provider handler.
 
-3.  **Authorization Code Exchange**: The upstream provider redirects to the `grafton-server` callback with an authorization code. `grafton-server` verifies the state and returns the authorization code and state to the DC's downstream callback redirect_uri.
+3.  **Upstream Provider Redirection**: `grafton-server`'s /login/:provider handler validates the request, creates a state parameter for CSRF protection, and redirects users to the upstream provider for authorization. The client's downstream redirect_uri is stored in the session to be used later amd the grafton-server's upstream callback endpoint (/oauth/:provider/callback) is used as the redirect_uri for the upstream provider.
 
-4.  **Token Exchange**: The DC makes a request to exchange the code for access/refresh tokens grafton-server initiates a session. While the session is usually expected to be identified by a bearer token on each request, the api server could also use session cookies if the DC also supports persistent client cookie jars.
+4.  **Authorization Code Exchange**: The upstream provider redirects to the `grafton-server` callback with an authorization code. `grafton-server` verifies the state and returns the authorization code and state to the DC's downstream callback redirect_uri.
+
+5.  **Token Exchange**: The DC makes a request to exchange the code for access/refresh tokens grafton-server initiates a session. While the session is usually expected to be identified by a bearer token on each request, the api server could also use session cookies if the DC also supports persistent client cookie jars.
 
         OpenAI specific example.  ChatGPT will complete the OAuth flow by making a POST request to the authorization_url with content type authorization_content_type and parameters
         {
@@ -45,7 +47,7 @@ This document describes the authentication and authorization process between dow
             "expires_in": 59
         }
 
-5.  **Refresh Token Flow**:
+6.  **Refresh Token Flow**:
 
 When grafton-server initially exchanges an authorization code for access and refresh tokens from an upstream provider, it must securely store the refresh token associated with the downstream client and user session. When a DC requests a token refresh grafton-server looks up the stored refresh token for that session or client ID and forwards the refresh request to the upstream provider, including the refresh token and its own client credentials if required. Upon receiving new tokens from the upstream provider, grafton-server updates its storage with the new access and refresh tokens and forwards these to the requesting DC.
 
@@ -80,11 +82,11 @@ sequenceDiagram
     User->>DC: Request resource access
     DC->>Grafton: Redirect with Client ID & scope (/oauth/auth)
     Grafton->>Grafton: Validate & generate state
-    Grafton-->>User: Redirect to UP for auth (/oauth2/auth)
+    Grafton-->>User: Redirect to UP for auth
     User->>UP: Authenticate & consent
     UP->>Grafton: Callback with code & state (/oauth/callback)
     Grafton->>Grafton: Validate state
-    Grafton->>DC: Redirect to DC with code
+    Grafton->>DC: Redirect to DC callback with code
     DC->>Grafton: Exchange code for tokens (/oauth/token)
     Grafton->>Grafton: Grant resource access and login user session
     Grafton->>DC: Return tokens

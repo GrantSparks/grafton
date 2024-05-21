@@ -20,6 +20,25 @@ pub struct AuthzResp {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+pub struct AuthzReq {
+    pub response_type: String,
+    pub client_id: String,
+    pub redirect_uri: String,
+    pub state: CsrfToken,
+    pub scope: String,
+}
+
+impl std::fmt::Display for AuthzReq {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "response_type={}&client_id={}&redirect_uri={}&state={:?}&scope={}",
+            self.response_type, self.client_id, self.redirect_uri, self.state, self.scope
+        )
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct Credentials {
     pub code: String,
     pub old_state: CsrfToken,
