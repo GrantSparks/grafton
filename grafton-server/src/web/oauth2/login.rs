@@ -84,29 +84,32 @@ mod post {
         State(_config): State<Config>,
         Form(NextUrl { next }): Form<NextUrl>,
     ) -> Result<impl IntoResponse, Error> {
-        match auth_session.backend.authorize_url(provider.clone()) {
-            Ok((url, token)) => {
-                if let Err(e) = session.insert(CSRF_STATE_KEY, token.secret()).await {
-                    error!("Error serializing CSRF token: {:?}", e);
-                    return Err(Error::SerializationError(e.to_string()));
-                }
-
-                if next.is_empty() {
-                    error!("NEXT_URL_KEY is empty or null");
-                }
-
-                if let Err(e) = session.insert(NEXT_URL_KEY, next).await {
-                    error!("Error serializing next URL: {:?}", e);
-                    return Err(Error::SerializationError(e.to_string()));
-                }
-
-                Ok(Redirect::to(url.as_str()).into_response())
-            }
-            Err(e) => {
+        let (url, token) = auth_session
+            .backend
+            .authorize_url(provider.clone())
+            .map_err(|e| {
                 error!("Error generating authorization URL: {:?}", e);
-                Err(Error::AuthorizationUrlError(e.to_string()))
-            }
+                Error::AuthorizationUrlError(e.to_string())
+            })?;
+
+        session
+            .insert(CSRF_STATE_KEY, token.secret())
+            .await
+            .map_err(|e| {
+                error!("Error serializing CSRF token: {:?}", e);
+                Error::SerializationError(e.to_string())
+            })?;
+
+        if next.is_empty() {
+            error!("NEXT_URL_KEY is empty or null");
         }
+
+        session.insert(NEXT_URL_KEY, next).await.map_err(|e| {
+            error!("Error serializing next URL: {:?}", e);
+            Error::SerializationError(e.to_string())
+        })?;
+
+        Ok(Redirect::to(url.as_str()).into_response())
     }
 }
 
