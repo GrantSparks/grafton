@@ -1,11 +1,14 @@
 use std::sync::Arc;
 
-use {
-    tower_http::{services::ServeDir, services::ServeFile},
-    tracing::{debug, error},
-};
+use tower_http::{services::ServeDir, services::ServeFile};
 
-use crate::{core::AxumRouter, model::Context, web::ProtectedApp, Error, ServerConfigProvider};
+use crate::{
+    core::AxumRouter,
+    model::Context,
+    tracing::{debug, error},
+    web::ProtectedApp,
+    Error, ServerConfigProvider,
+};
 
 #[cfg(feature = "rbac")]
 use crate::rbac;

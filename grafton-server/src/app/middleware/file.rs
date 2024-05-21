@@ -3,12 +3,13 @@ use std::{
     sync::Arc,
 };
 
-use {
-    tower_http::services::{ServeDir, ServeFile},
-    tracing::{debug, error},
-};
+use tower_http::services::{ServeDir, ServeFile};
 
-use crate::{model::Context, Config, Error, ServerConfigProvider};
+use crate::{
+    model::Context,
+    tracing::{debug, error},
+    Config, Error, ServerConfigProvider,
+};
 
 fn get_fallback_file(config: &Config) -> Result<PathBuf, Error> {
     let web_root_path = Path::new(&config.website.web_root);

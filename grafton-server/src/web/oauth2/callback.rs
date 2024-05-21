@@ -1,20 +1,19 @@
+use {axum_login::tower_sessions::Session, serde_json::json, url::Url};
+
 use crate::{
+    axum::{
+        extract::{Form, Path, Query, State},
+        response::{IntoResponse, Json, Redirect},
+        routing::{get, post},
+    },
     core::AxumRouter,
+    tracing::{debug, error, info, warn},
     web::oauth2::{
         login::{OpenAiAuthParams, NEXT_URL_KEY},
         AuthzResp, Credentials, CSRF_STATE_KEY,
     },
     AuthSession, Config, Error, ServerConfigProvider,
 };
-use axum::{
-    extract::{Form, Path, Query, State},
-    response::{IntoResponse, Json, Redirect},
-    routing::{get, post},
-};
-use axum_login::tower_sessions::Session;
-use serde_json::json;
-use tracing::{debug, error, info, warn};
-use url::Url;
 
 pub fn router<C>() -> AxumRouter<C>
 where

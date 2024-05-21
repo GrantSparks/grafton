@@ -1,8 +1,9 @@
 use {
     axum_login::tower_sessions::{cookie::SameSite, Expiry, MemoryStore, SessionManagerLayer},
     time::Duration,
-    tracing::debug,
 };
+
+use crate::tracing::debug;
 
 pub fn create_session_layer() -> SessionManagerLayer<MemoryStore> {
     debug!("Creating session layer");

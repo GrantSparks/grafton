@@ -1,10 +1,9 @@
-use {
-    tracing::{debug, error, info, subscriber::set_global_default, trace, warn, Level},
-    tracing_appender::non_blocking::WorkerGuard,
-    tracing_subscriber::fmt::format::FmtSpan,
-};
+use {tracing_appender::non_blocking::WorkerGuard, tracing_subscriber::fmt::format::FmtSpan};
 
-use crate::util::config::{Config, Verbosity};
+use crate::{
+    tracing::{debug, error, info, subscriber::set_global_default, trace, warn, Level},
+    util::config::{Config, Verbosity},
+};
 
 pub struct Logger {
     _guard: WorkerGuard, // Keeps the background worker alive
