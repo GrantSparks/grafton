@@ -74,11 +74,6 @@ impl AuthnBackend for Backend {
         &self,
         creds: Self::Credentials,
     ) -> Result<Option<Self::User>, Self::Error> {
-        // Ensure the CSRF state has not been tampered with.
-        if creds.old_state.secret() != creds.new_state.secret() {
-            return Ok(None);
-        };
-
         if let Some(oauth_client) = self.oauth_providers.get(&creds.provider) {
             // Use oauth_client for the token exchange
             let token_res = oauth_client

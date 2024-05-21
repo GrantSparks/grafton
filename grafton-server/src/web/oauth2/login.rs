@@ -25,11 +25,11 @@ pub struct NextUrl {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct OpenAiAuthParams {
-    grant_type: String,
-    client_id: String,
-    client_secret: String,
-    code: String,
-    redirect_uri: String,
+    pub grant_type: String,
+    pub client_id: String,
+    pub client_secret: String,
+    pub code: String,
+    pub redirect_uri: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -63,15 +63,11 @@ where
         .route("/login/:provider", get(self::get::login))
         .route("/login", get(self::get::choose_provider))
         .route("/oauth/auth", get(self::get::choose_provider))
-        .route("/oauth/token", post(self::post::get_access_token))
 }
 
 mod post {
 
-    use axum::Json;
     use axum_login::tower_sessions::Session;
-    use serde_json::json;
-    use tracing::info;
 
     use crate::{
         axum::{extract::State, response::Redirect, Form},
@@ -79,7 +75,7 @@ mod post {
         AuthSession, Error,
     };
 
-    use super::{error, Config, IntoResponse, NextUrl, OpenAiAuthParams, Path, NEXT_URL_KEY};
+    use super::{error, Config, IntoResponse, NextUrl, Path, NEXT_URL_KEY};
 
     pub async fn login(
         auth_session: AuthSession,
@@ -111,31 +107,6 @@ mod post {
                 Err(Error::AuthorizationUrlError(e.to_string()))
             }
         }
-    }
-
-    pub async fn get_access_token(
-        State(_config): State<Config>,
-        Form(OpenAiAuthParams {
-            grant_type,
-            client_id,
-            client_secret,
-            code,
-            redirect_uri,
-        }): Form<OpenAiAuthParams>,
-    ) -> Result<impl IntoResponse, Error> {
-        info!("{}", format!(
-            "Received access token request with the following parameters: client_id={}, client_secret={}, grant_type={}, code={:?}, redirect_uri={}",
-            client_id, client_secret, grant_type, code, redirect_uri
-        ));
-
-        let response_body = json!({
-            "access_token": "example_token",
-            "token_type": "bearer",
-            "refresh_token": "example_token",
-            "expires_in": 59,
-        });
-
-        Ok(Json(response_body))
     }
 }
 
