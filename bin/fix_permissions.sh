@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# Navigate to the parent directory of the script's location
+cd "$(dirname "$0")/.."
+
+# Print the current working directory for verification
+echo "Current working directory: $(pwd)"
+
 # Get all files that are not ignored by git
 all_files=$(git ls-files && git ls-files --exclude-standard --others)
 

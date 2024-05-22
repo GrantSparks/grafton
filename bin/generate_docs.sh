@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Navigate to the parent directory of the script's location
+cd "$(dirname "$0")/.."
+
 # Default target directory and verbosity
 target_directory="./target"
 verbose=0
