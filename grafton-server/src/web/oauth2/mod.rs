@@ -1,10 +1,10 @@
-use {oauth2::CsrfToken, serde::Deserialize};
+use {
+    oauth2::CsrfToken,
+    serde::{Deserialize, Serialize},
+};
 
 mod logout;
 pub use logout::router as create_logout_router;
-
-mod callback;
-pub use callback::router as create_callback_router;
 
 mod login;
 pub use login::router as create_login_router;
@@ -15,8 +15,8 @@ pub const CSRF_STATE_KEY: &str = "oauth.csrf-state";
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct AuthzResp {
-    code: String,
-    state: CsrfToken,
+    pub code: String,
+    pub state: CsrfToken,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -43,4 +43,27 @@ pub struct Credentials {
     pub code: String,
     pub provider: String,
     pub userinfo_uri: String,
+}
+
+pub const NEXT_URL_KEY: &str = "auth.next-url";
+
+#[derive(Debug, Deserialize)]
+pub struct NextUrl {
+    pub next: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+pub enum NextOrAuthzReq {
+    NextUrl(NextUrl),
+    AuthzReq(AuthzReq),
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct OpenAiAuthParams {
+    pub grant_type: String,
+    pub client_id: String,
+    pub client_secret: String,
+    pub code: String,
+    pub redirect_uri: String,
 }

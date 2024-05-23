@@ -12,7 +12,9 @@ use {
 
 use crate::{
     axum::{
-        extract::OriginalUri, http::StatusCode, middleware::from_fn, middleware::Next,
+        extract::OriginalUri,
+        http::StatusCode,
+        middleware::{from_fn, Next},
         response::Redirect,
     },
     core::AxumRouter,
@@ -20,11 +22,11 @@ use crate::{
     model::Context,
     tracing::{debug, error, info},
     web::{
-        oauth2::{create_callback_router, create_login_router, create_logout_router},
-        router::protected,
+        oauth2::{create_login_router, create_logout_router},
+        router::{auth, protected},
         Backend,
     },
-    AuthSession, ServerConfigProvider,
+    AuthSession, Config, ServerConfigProvider,
 };
 
 pub struct ProtectedApp<C>
@@ -37,6 +39,7 @@ where
     login_url: String,
     protected_router: Option<AxumRouter<C>>,
     protected_route: String,
+    config: Config,
 }
 
 impl<C> ProtectedApp<C>
@@ -100,6 +103,7 @@ where
                 .pages
                 .with_root()
                 .protected_home,
+            config: app_ctx.config.get_server_config().clone(),
         })
     }
 
@@ -151,10 +155,12 @@ where
             protected::router(&self.protected_route)
         };
 
+        let auth_router = auth::Auth::new(self.config);
+
         router
             .route_layer(auth_middleware)
             .merge(create_login_router())
-            .merge(create_callback_router())
+            .merge(auth_router.router())
             .merge(create_logout_router("/logout"))
             .layer(auth_layer)
     }
