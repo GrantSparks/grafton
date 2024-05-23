@@ -13,7 +13,7 @@ use {
     sqlx::SqlitePool,
 };
 
-use crate::{axum::async_trait, model::User, Error};
+use crate::{axum::async_trait, model::User, tracing::debug, Error};
 
 use super::Credentials;
 
@@ -61,6 +61,18 @@ impl Backend {
                     .url())
             },
         )
+    }
+
+    pub async fn get_user_by_access_token(
+        &self,
+        access_token: &str,
+    ) -> Result<Option<User>, Error> {
+        debug!("Getting user by access token: {}", access_token);
+
+        let query = sqlx::query_as::<_, User>("select * from users where access_token = ?")
+            .bind(access_token);
+
+        query.fetch_optional(&self.db).await.map_err(Error::Sqlx)
     }
 }
 

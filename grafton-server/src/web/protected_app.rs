@@ -6,14 +6,16 @@ use {
         tower_sessions::{MemoryStore, SessionManagerLayer},
         url_with_redirect_query, AuthManagerLayerBuilder,
     },
+    hyper::Uri,
     oauth2::{basic::BasicClient, AuthUrl, RedirectUrl, TokenUrl},
     sqlx::SqlitePool,
 };
 
 use crate::{
     axum::{
+        body::Body,
         extract::OriginalUri,
-        http::StatusCode,
+        http::{HeaderMap, StatusCode},
         middleware::{from_fn, Next},
         response::Redirect,
     },
@@ -119,24 +121,50 @@ where
 
         let login_url = Arc::new(self.login_url);
         let auth_middleware = from_fn(
-            move |auth_session: AuthSession,
+            move |mut auth_session: AuthSession,
                   OriginalUri(original_uri): OriginalUri,
+                  headers: HeaderMap,
                   req,
                   next: Next| {
                 let login_url_clone = login_url.clone();
                 async move {
                     if auth_session.user.is_some() {
+                        debug!("Authenticated user in session, continuing");
                         next.run(req).await
                     } else {
-                        match url_with_redirect_query(&login_url_clone, "next", original_uri) {
-                            Ok(login_url) => {
-                                Redirect::temporary(&login_url.to_string()).into_response()
-                            }
+                        let token = headers
+                            .get("authorization")
+                            .and_then(|header| header.to_str().ok())
+                            .and_then(|header| header.strip_prefix("Bearer "))
+                            .map(std::string::ToString::to_string);
 
-                            Err(err) => {
-                                error!(err = %err);
-                                StatusCode::INTERNAL_SERVER_ERROR.into_response()
+                        if let Some(token) = token {
+                            let user_result =
+                                auth_session.backend.get_user_by_access_token(&token).await;
+
+                            match user_result {
+                                Ok(Some(user)) => match auth_session.login(&user).await {
+                                    Ok(()) => {
+                                        debug!("User authenticated by access token, continuing");
+                                        next.run(req).await
+                                    }
+                                    Err(err) => {
+                                        error!(err = %err);
+                                        StatusCode::INTERNAL_SERVER_ERROR.into_response()
+                                    }
+                                },
+                                Ok(None) => {
+                                    debug!("No user found for bearer token");
+                                    redirect_to_login(&login_url_clone, &original_uri)
+                                }
+                                Err(err) => {
+                                    error!(err = %err);
+                                    StatusCode::INTERNAL_SERVER_ERROR.into_response()
+                                }
                             }
+                        } else {
+                            debug!("User not authenticated, redirecting to login");
+                            redirect_to_login(&login_url_clone, &original_uri)
                         }
                     }
                 }
@@ -163,5 +191,21 @@ where
             .merge(auth_router.router())
             .merge(create_logout_router("/logout"))
             .layer(auth_layer)
+    }
+}
+
+fn redirect_to_login(login_url: &Arc<String>, original_uri: &Uri) -> hyper::Response<Body> {
+    match url_with_redirect_query(login_url, "next", original_uri.clone()) {
+        Ok(login_url) => {
+            debug!(
+                "Redirecting to login url: {} with next param {:?}",
+                login_url, original_uri
+            );
+            Redirect::temporary(&login_url.to_string()).into_response()
+        }
+        Err(err) => {
+            error!(err = %err);
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
     }
 }
