@@ -345,7 +345,7 @@ mod tests {
 
     #[test]
     fn test_base_prepend_with_and_without_trailing_slash() {
-        let pages_with_slash = Routes {
+        let routes_with_slash = Routes {
             root: "/api/".to_string(),
             public_home: "home".to_string(),
             public_error: "error".to_string(),
@@ -354,14 +354,14 @@ mod tests {
             protected_home: "protected".to_string(),
         };
 
-        let updated_pages_with_slash = pages_with_slash.with_root();
-        assert_eq!(updated_pages_with_slash.public_home, "/api/home");
-        assert_eq!(updated_pages_with_slash.public_error, "/api/error");
-        assert_eq!(updated_pages_with_slash.public_login, "/api/login");
-        assert_eq!(updated_pages_with_slash.public_logout, "/api/logout");
-        assert_eq!(updated_pages_with_slash.protected_home, "/api/protected");
+        let updated_routes_with_slash = routes_with_slash.with_root();
+        assert_eq!(updated_routes_with_slash.public_home, "/api/home");
+        assert_eq!(updated_routes_with_slash.public_error, "/api/error");
+        assert_eq!(updated_routes_with_slash.public_login, "/api/login");
+        assert_eq!(updated_routes_with_slash.public_logout, "/api/logout");
+        assert_eq!(updated_routes_with_slash.protected_home, "/api/protected");
 
-        let pages_without_slash = Routes {
+        let routes_without_slash = Routes {
             root: "/api".to_string(),
             public_home: "home".to_string(),
             public_error: "error".to_string(),
@@ -370,17 +370,20 @@ mod tests {
             protected_home: "protected".to_string(),
         };
 
-        let updated_pages_without_slash = pages_without_slash.with_root();
-        assert_eq!(updated_pages_without_slash.public_home, "/api/home");
-        assert_eq!(updated_pages_without_slash.public_error, "/api/error");
-        assert_eq!(updated_pages_without_slash.public_login, "/api/login");
-        assert_eq!(updated_pages_without_slash.public_logout, "/api/logout");
-        assert_eq!(updated_pages_without_slash.protected_home, "/api/protected");
+        let updated_routes_without_slash = routes_without_slash.with_root();
+        assert_eq!(updated_routes_without_slash.public_home, "/api/home");
+        assert_eq!(updated_routes_without_slash.public_error, "/api/error");
+        assert_eq!(updated_routes_without_slash.public_login, "/api/login");
+        assert_eq!(updated_routes_without_slash.public_logout, "/api/logout");
+        assert_eq!(
+            updated_routes_without_slash.protected_home,
+            "/api/protected"
+        );
     }
 
     #[test]
     fn test_base_prepend_with_special_cases() {
-        let pages = Routes {
+        let routes = Routes {
             root: "/".to_string(),
             public_home: String::new(),
             public_error: "/".to_string(),
@@ -389,12 +392,12 @@ mod tests {
             protected_home: "/".to_string(),
         };
 
-        let updated_pages = pages.with_root();
-        assert_eq!(updated_pages.public_home, "/");
-        assert_eq!(updated_pages.public_error, "/");
-        assert_eq!(updated_pages.public_login, "/");
-        assert_eq!(updated_pages.public_logout, "/");
-        assert_eq!(updated_pages.protected_home, "/");
+        let updated_routes = routes.with_root();
+        assert_eq!(updated_routes.public_home, "/");
+        assert_eq!(updated_routes.public_error, "/");
+        assert_eq!(updated_routes.public_login, "/");
+        assert_eq!(updated_routes.public_logout, "/");
+        assert_eq!(updated_routes.protected_home, "/");
     }
 
     #[allow(clippy::similar_names)]
@@ -459,7 +462,7 @@ mod tests {
     }
 
     #[test]
-    fn test_pages_deserialization() {
+    fn test_routes_deserialization() {
         let json = r#"{
             "root": "/api",
             "public_home": "/home",
@@ -489,7 +492,7 @@ mod tests {
 
     #[test]
     fn test_with_base_prepend() {
-        let pages = Routes {
+        let routes = Routes {
             root: "/api".to_string(),
             public_home: "home".to_string(),
             public_error: "/error".to_string(),
@@ -498,13 +501,13 @@ mod tests {
             protected_home: "protected".to_string(),
         };
 
-        let new_pages = pages.with_root();
-        assert_eq!(new_pages.root, "/api/");
-        assert_eq!(new_pages.public_home, "/api/home");
-        assert_eq!(new_pages.public_error, "/api/error");
-        assert_eq!(new_pages.public_login, "/api/login");
-        assert_eq!(new_pages.public_logout, "/api/logout");
-        assert_eq!(new_pages.protected_home, "/api/protected");
+        let new_routes = routes.with_root();
+        assert_eq!(new_routes.root, "/api/");
+        assert_eq!(new_routes.public_home, "/api/home");
+        assert_eq!(new_routes.public_error, "/api/error");
+        assert_eq!(new_routes.public_login, "/api/login");
+        assert_eq!(new_routes.public_logout, "/api/logout");
+        assert_eq!(new_routes.protected_home, "/api/protected");
     }
 
     #[test]

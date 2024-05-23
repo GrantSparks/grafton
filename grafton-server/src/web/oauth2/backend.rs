@@ -75,7 +75,6 @@ impl AuthnBackend for Backend {
         creds: Self::Credentials,
     ) -> Result<Option<Self::User>, Self::Error> {
         if let Some(oauth_client) = self.oauth_providers.get(&creds.provider) {
-            // Use oauth_client for the token exchange
             let token_res = oauth_client
                 .exchange_code(AuthorizationCode::new(creds.code))
                 .request_async(async_http_client)
@@ -129,7 +128,6 @@ impl AuthnBackend for Backend {
                 }
             }
 
-            // Persist user in our database so we can use `get_user`.
             let user = sqlx::query_as(
                 r"
                 insert into users (username, access_token, refresh_token)

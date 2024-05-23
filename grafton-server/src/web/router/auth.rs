@@ -71,7 +71,6 @@ pub struct ProviderTemplate {
     pub providers: Vec<String>,
 }
 
-// AuthRouter struct and member functions
 pub struct Auth<C>
 where
     C: ServerConfigProvider,
@@ -79,7 +78,6 @@ where
     config: Config,
     db: SqlitePool,
     _marker: PhantomData<C>,
-    // Add other resources like database connections here
 }
 
 impl<C> Auth<C>
@@ -90,8 +88,7 @@ where
         Self {
             config,
             db,
-            _marker: PhantomData, // Initialize the marker
-                                  // Initialize other resources here
+            _marker: PhantomData,
         }
     }
 
@@ -194,7 +191,7 @@ where
             "access_token": user.access_token,
             "token_type": "bearer",
             "refresh_token": user.refresh_token,
-            "expires_in": 59, // TODO:  Reconcile this with the actual expiration time
+            "expires_in": user.expires_in,
         });
 
         Ok(Json(response_body))
