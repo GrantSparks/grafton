@@ -6,8 +6,8 @@ use crate::{
         routing::{get, post},
     },
     core::AxumRouter,
+    oauth2::NextUrl,
     tracing::error,
-    web::oauth2::NextUrl,
     Config, ServerConfigProvider,
 };
 
@@ -34,7 +34,7 @@ mod post {
 
     use crate::{
         axum::{extract::State, response::Redirect, Form},
-        web::oauth2::{CSRF_STATE_KEY, NEXT_URL_KEY},
+        oauth2::{CSRF_STATE_KEY, NEXT_URL_KEY},
         AuthSession, Error,
     };
 

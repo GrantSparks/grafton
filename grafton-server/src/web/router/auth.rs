@@ -24,11 +24,11 @@ use crate::{
         routing::{get, post},
         Router,
     },
-    tracing::{debug, error, info, warn},
-    web::oauth2::{
+    oauth2::{
         AuthzReq, AuthzResp, Credentials, NextOrAuthzReq, NextUrl, OpenAiAuthParams,
         CSRF_STATE_KEY, NEXT_URL_KEY,
     },
+    tracing::{debug, error, info, warn},
     AuthSession, AxumRouter, Config, Error, ServerConfigProvider,
 };
 

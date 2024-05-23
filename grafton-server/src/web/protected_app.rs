@@ -20,11 +20,9 @@ use crate::{
     core::AxumRouter,
     error::Error,
     model::Context,
+    oauth2::backend::Backend,
     tracing::{debug, error, info},
-    web::{
-        router::{auth, create_login_route, create_logout_route, protected},
-        Backend,
-    },
+    web::router::{auth, create_login_route, create_logout_route, protected},
     AuthSession, Config, ServerConfigProvider,
 };
 

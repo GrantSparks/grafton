@@ -4,6 +4,7 @@
 mod app;
 mod error;
 pub mod model;
+mod oauth2;
 mod util;
 mod web;
 
