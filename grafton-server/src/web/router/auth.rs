@@ -28,7 +28,7 @@ use crate::{
         AuthzReq, AuthzResp, Credentials, NextOrAuthzReq, NextUrl, OpenAiAuthParams,
         CSRF_STATE_KEY, NEXT_URL_KEY,
     },
-    tracing::{debug, error, info, warn},
+    tracing::{debug, error, warn},
     AuthSession, AxumRouter, Config, Error, ServerConfigProvider,
 };
 
@@ -130,11 +130,6 @@ where
             redirect_uri,
         }): Form<OpenAiAuthParams>,
     ) -> Result<impl IntoResponse, Error> {
-        info!(
-            "Received access token request with parameters: client_id={}, client_secret={}, grant_type={}, code={:?}, redirect_uri={}",
-            client_id, client_secret, grant_type, code, redirect_uri
-        );
-
         let provider: String = sqlx::query_scalar(
             r"
             SELECT provider
