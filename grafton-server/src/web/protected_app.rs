@@ -22,7 +22,7 @@ use crate::{
     model::Context,
     oauth2::backend::Backend,
     tracing::{debug, error, info},
-    web::router::{auth, create_login_route, create_logout_route, protected},
+    web::router::{auth, protected},
     AuthSession, Config, ServerConfigProvider,
 };
 
@@ -156,11 +156,11 @@ where
 
         router
             .route_layer(auth_middleware)
-            .merge(create_login_route())
+            //            .merge(create_login_route())
             .merge(auth_router.router())
-            .merge(create_logout_route(
-                &self.config.website.routes.with_root().public_logout,
-            ))
+            //            .merge(create_logout_route(
+            //                &self.config.website.routes.with_root().public_logout,
+            //            ))
             .layer(auth_layer)
     }
 }
