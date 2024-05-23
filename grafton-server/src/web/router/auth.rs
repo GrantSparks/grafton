@@ -3,6 +3,7 @@ use std::marker::PhantomData;
 use {
     askama::Template,
     axum_login::tower_sessions::Session,
+    hyper::HeaderMap,
     oxide_auth::{
         endpoint::WebRequest,
         frontends::simple::endpoint::Vacant,
@@ -227,7 +228,6 @@ where
                     Error::InvalidNextUrl(next)
                 })?;
 
-                // Insert the code and provider into the downstream_clients table
                 sqlx::query(
                     r"
                         insert into downstream_clients (code, provider)
@@ -255,6 +255,25 @@ where
         }
     }
 
+    pub fn refresh_token(&self, headers: &HeaderMap) -> Result<impl IntoResponse, Error> {
+        debug!("refresh_token headers:");
+        for (key, value) in headers {
+            debug!("{}: {:?}", key, value);
+        }
+
+        let new_access_token = "new_access_token";
+        let new_refresh_token = "new_refresh_token";
+
+        let response_body = json!({
+            "access_token": new_access_token,
+            "token_type": "bearer",
+            "refresh_token": new_refresh_token,
+            "expires_in": 1, // TODO: Set appropriate expiration time
+        });
+
+        Ok(Json(response_body))
+    }
+
     pub fn router(self) -> AxumRouter<C> {
         let this = std::sync::Arc::new(self);
         Router::new()
@@ -275,6 +294,16 @@ where
                     move |auth_session, form| {
                         let this = this.clone();
                         async move { this.get_access_token(auth_session, form).await }
+                    }
+                }),
+            )
+            .route(
+                "/oauth/token/refresh",
+                post({
+                    let this = this.clone();
+                    move |headers| {
+                        let this = this.clone();
+                        async move { this.refresh_token(&headers) }
                     }
                 }),
             )
