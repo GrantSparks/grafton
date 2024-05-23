@@ -3,12 +3,6 @@ use {
     serde::{Deserialize, Serialize},
 };
 
-mod logout;
-pub use logout::router as create_logout_router;
-
-mod login;
-pub use login::router as create_login_router;
-
 pub mod backend;
 
 pub const CSRF_STATE_KEY: &str = "oauth.csrf-state";
