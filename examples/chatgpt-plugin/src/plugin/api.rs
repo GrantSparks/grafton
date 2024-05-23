@@ -12,7 +12,7 @@ pub fn build_todos_router(app_ctx: &Arc<AppContext>) -> AppRouter {
         .config
         .get_server_config()
         .website
-        .pages
+        .routes
         .with_root()
         .protected_home;
 

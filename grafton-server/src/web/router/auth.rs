@@ -250,7 +250,7 @@ where
                 Ok(Redirect::to(&url_str).into_response())
             }
             _ => Ok(
-                Redirect::to(&self.config.website.pages.with_root().public_login).into_response(),
+                Redirect::to(&self.config.website.routes.with_root().public_login).into_response(),
             ),
         }
     }

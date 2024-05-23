@@ -78,7 +78,7 @@ pub enum Verbosity {
 #[derive(Debug, Serialize, Deserialize, Derivative, Clone)]
 #[derivative(Default)]
 #[serde(default)]
-pub struct Pages {
+pub struct Routes {
     #[derivative(Default(value = "\"/\".into()"))]
     pub root: String,
     #[derivative(Default(value = "String::new()"))]
@@ -93,8 +93,8 @@ pub struct Pages {
     pub protected_home: String,
 }
 
-impl Pages {
-    /// Returns a new `Pages` struct with the `root` path prepended to all paths.
+impl Routes {
+    /// Returns a new `Routes` struct with the `root` path prepended to all paths.
     pub fn with_root(&self) -> Self {
         let normalized_base = normalize_slash(&self.root);
         Self {
@@ -152,7 +152,7 @@ pub struct Website {
 
     #[derivative(Default)]
     #[serde(default)]
-    pub pages: Pages,
+    pub routes: Routes,
 }
 
 impl Website {
@@ -345,7 +345,7 @@ mod tests {
 
     #[test]
     fn test_base_prepend_with_and_without_trailing_slash() {
-        let pages_with_slash = Pages {
+        let pages_with_slash = Routes {
             root: "/api/".to_string(),
             public_home: "home".to_string(),
             public_error: "error".to_string(),
@@ -361,7 +361,7 @@ mod tests {
         assert_eq!(updated_pages_with_slash.public_logout, "/api/logout");
         assert_eq!(updated_pages_with_slash.protected_home, "/api/protected");
 
-        let pages_without_slash = Pages {
+        let pages_without_slash = Routes {
             root: "/api".to_string(),
             public_home: "home".to_string(),
             public_error: "error".to_string(),
@@ -380,7 +380,7 @@ mod tests {
 
     #[test]
     fn test_base_prepend_with_special_cases() {
-        let pages = Pages {
+        let pages = Routes {
             root: "/".to_string(),
             public_home: String::new(),
             public_error: "/".to_string(),
@@ -466,7 +466,7 @@ mod tests {
             "public_error": "/error"
         }"#;
 
-        let deserialized: Pages = serde_json::from_str(json).expect("Deserialization failed");
+        let deserialized: Routes = serde_json::from_str(json).expect("Deserialization failed");
         assert_eq!(deserialized.root, "/api");
         assert_eq!(deserialized.public_home, "/home");
         assert_eq!(deserialized.public_error, "/error");
@@ -489,7 +489,7 @@ mod tests {
 
     #[test]
     fn test_with_base_prepend() {
-        let pages = Pages {
+        let pages = Routes {
             root: "/api".to_string(),
             public_home: "home".to_string(),
             public_error: "/error".to_string(),
@@ -641,7 +641,7 @@ mod tests {
     
             [session]
     
-            [pages]
+            [routes]
     
             [oauth_providers]
             google = { display_name = "Google", client_id = "YOUR GOOGLE CLIENT ID", client_secret = "YOUR GOOGLE CLIENT SECRET", auth_uri = "https://accounts.google.com/o/oauth2/auth", token_uri = "https://oauth2.googleapis.com/token" }

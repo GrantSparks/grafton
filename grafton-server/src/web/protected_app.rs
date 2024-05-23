@@ -91,7 +91,7 @@ where
                 .config
                 .get_server_config()
                 .website
-                .pages
+                .routes
                 .with_root()
                 .public_login,
             protected_router,
@@ -99,7 +99,7 @@ where
                 .config
                 .get_server_config()
                 .website
-                .pages
+                .routes
                 .with_root()
                 .protected_home,
             config: app_ctx.config.get_server_config().clone(),
@@ -161,7 +161,7 @@ where
             .merge(create_login_route())
             .merge(auth_router.router())
             .merge(create_logout_route(
-                &self.config.website.pages.with_root().public_logout,
+                &self.config.website.routes.with_root().public_logout,
             ))
             .layer(auth_layer)
     }
