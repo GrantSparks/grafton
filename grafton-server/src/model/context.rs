@@ -3,7 +3,7 @@ use std::{
     sync::Arc,
 };
 
-use axum_login::axum::extract::FromRef;
+use crate::axum::extract::FromRef;
 
 #[cfg(feature = "rbac")]
 use {oso::Oso, std::sync::Mutex};
