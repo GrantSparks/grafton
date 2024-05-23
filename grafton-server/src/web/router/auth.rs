@@ -48,7 +48,7 @@ pub struct AccessTokenEndpointBuilder<R: WebRequest> {
     #[builder(default = None, setter(skip))]
     response: Option<Vacant>,
     #[builder(default, setter(skip))]
-    _marker: std::marker::PhantomData<R>,
+    _marker: PhantomData<R>,
 }
 
 #[allow(dead_code)]
@@ -137,9 +137,9 @@ where
 
         let provider: String = sqlx::query_scalar(
             r"
-            select provider
-            from downstream_clients
-            where code = ?
+            SELECT provider
+            FROM downstream_clients
+            WHERE code = ?
             ",
         )
         .bind(&code)
@@ -227,11 +227,11 @@ where
 
                 sqlx::query(
                     r"
-                        insert into downstream_clients (code, provider)
-                        values (?, ?)
-                        on conflict(code) do update
-                        set provider = excluded.provider
-    ",
+                        INSERT INTO downstream_clients (code, provider)
+                        VALUES (?, ?)
+                        ON CONFLICT(code) DO UPDATE
+                        SET provider = excluded.provider
+                    ",
                 )
                 .bind(&code)
                 .bind(&provider)
