@@ -67,6 +67,7 @@ pub struct User {
     pub role: Role,
     pub access_token: AccessToken,
     pub refresh_token: Option<RefreshToken>,
+    pub expires_in: Option<i64>,
 }
 
 #[cfg(not(feature = "rbac"))]

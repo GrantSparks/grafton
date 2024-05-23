@@ -4,6 +4,7 @@ create table if not exists users (
     username text not null unique,
     access_token text not null,
     refresh_token text,
+    expires_in integer,
     role TEXT NOT NULL DEFAULT 'None'
 );
 -- Create downstream_clients table.

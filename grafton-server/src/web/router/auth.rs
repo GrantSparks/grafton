@@ -193,7 +193,7 @@ where
             "access_token": user.access_token,
             "token_type": "bearer",
             "refresh_token": user.refresh_token,
-            "expires_in": 59, // TODO:  Reconcile this with the actual expiration time
+            "expires_in": user.expires_in,
         });
 
         Ok(Json(response_body))
