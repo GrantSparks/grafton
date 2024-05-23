@@ -11,6 +11,7 @@ use {
         },
     },
     serde_json::json,
+    sqlx::SqlitePool,
     typed_builder::TypedBuilder,
     url::Url,
 };
@@ -75,6 +76,7 @@ where
     C: ServerConfigProvider,
 {
     config: Config,
+    db: SqlitePool,
     _marker: PhantomData<C>,
     // Add other resources like database connections here
 }
@@ -83,9 +85,10 @@ impl<C> Auth<C>
 where
     C: ServerConfigProvider,
 {
-    pub const fn new(config: Config) -> Self {
+    pub const fn new(config: Config, db: SqlitePool) -> Self {
         Self {
             config,
+            db,
             _marker: PhantomData, // Initialize the marker
                                   // Initialize other resources here
         }
@@ -134,7 +137,21 @@ where
             client_id, client_secret, grant_type, code, redirect_uri
         );
 
-        let provider = "github".to_string();
+        let provider: String = sqlx::query_scalar(
+            r"
+            select provider
+            from downstream_clients
+            where code = ?
+            ",
+        )
+        .bind(&code)
+        .fetch_one(&self.db)
+        .await
+        .map_err(|e| {
+            error!("Failed to retrieve provider: {}", e);
+            Error::Sqlx(e)
+        })?;
+
         let oauth_client = self
             .config
             .oauth_providers
@@ -209,6 +226,25 @@ where
                     error!("Invalid URL in session: {}", next);
                     Error::InvalidNextUrl(next)
                 })?;
+
+                // Insert the code and provider into the downstream_clients table
+                sqlx::query(
+                    r"
+                        insert into downstream_clients (code, provider)
+                        values (?, ?)
+                        on conflict(code) do update
+                        set provider = excluded.provider
+    ",
+                )
+                .bind(&code)
+                .bind(&provider)
+                .execute(&self.db)
+                .await
+                .map_err(|e| {
+                    error!("Failed to insert downstream client: {}", e);
+                    Error::Sqlx(e)
+                })?;
+
                 url.query_pairs_mut().append_pair("code", &code);
                 let url_str = url.to_string();
                 Ok(Redirect::to(&url_str).into_response())

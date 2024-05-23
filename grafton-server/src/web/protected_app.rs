@@ -155,7 +155,7 @@ where
             protected::router(&self.protected_route)
         };
 
-        let auth_router = auth::Auth::new(self.config);
+        let auth_router = auth::Auth::new(self.config, self.db);
 
         router
             .route_layer(auth_middleware)
