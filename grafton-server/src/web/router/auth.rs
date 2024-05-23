@@ -148,7 +148,7 @@ where
         .fetch_one(&self.db)
         .await
         .map_err(|e| {
-            error!("Failed to retrieve provider: {}", e);
+            error!("Failed to retrieve provider for code {}: {}", code, e);
             Error::Sqlx(e)
         })?;
 
@@ -190,10 +190,10 @@ where
         })?;
 
         let response_body = json!({
-            "access_token": "example_token",
+            "access_token": user.access_token,
             "token_type": "bearer",
-            "refresh_token": "example_token",
-            "expires_in": 59,
+            "refresh_token": user.refresh_token,
+            "expires_in": 59, // TODO:  Reconcile this with the actual expiration time
         });
 
         Ok(Json(response_body))

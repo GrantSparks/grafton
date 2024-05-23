@@ -132,15 +132,17 @@ impl AuthnBackend for Backend {
             // Persist user in our database so we can use `get_user`.
             let user = sqlx::query_as(
                 r"
-            insert into users (username, access_token)
-            values (?, ?)
-            on conflict(username) do update
-            set access_token = excluded.access_token
-            returning *
-            ",
+                insert into users (username, access_token, refresh_token)
+                values (?, ?, ?)
+                on conflict(username) do update
+                set access_token = excluded.access_token,
+                    refresh_token = excluded.refresh_token
+                returning *
+                ",
             )
             .bind(login_id)
             .bind(token_res.access_token().secret())
+            .bind(token_res.refresh_token().map(oauth2::RefreshToken::secret))
             .fetch_one(&self.db)
             .await
             .map_err(Self::Error::Sqlx)?;

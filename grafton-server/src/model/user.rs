@@ -39,11 +39,18 @@ pub enum Role {
     Admin,
 }
 
+// This is basically a copy of oauth2::AccessToken with more derived traits.
 new_secret_type![
-    /// AccessToken wraps the token to prevent accidental leakage.
     #[derive(Default, Clone, Serialize, Deserialize, Eq, PartialEq, Hash, sqlx::Type)]
     #[sqlx(transparent)]
     AccessToken(String)
+];
+
+// This is basically a copy of oauth2::RefreshToken with more derived traits.
+new_secret_type![
+    #[derive(Default, Clone, Serialize, Deserialize, Eq, PartialEq, Hash, sqlx::Type)]
+    #[sqlx(transparent)]
+    RefreshToken(String)
 ];
 
 #[cfg(feature = "rbac")]
@@ -59,6 +66,7 @@ pub struct User {
     #[polar(attribute)]
     pub role: Role,
     pub access_token: AccessToken,
+    pub refresh_token: Option<RefreshToken>,
 }
 
 #[cfg(not(feature = "rbac"))]
