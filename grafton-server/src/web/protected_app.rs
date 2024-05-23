@@ -154,13 +154,15 @@ where
             protected::router(&self.protected_route)
         };
 
-        let auth_router = auth::Auth::new(self.config, self.db);
+        let auth_router = auth::Auth::new(self.config.clone(), self.db);
 
         router
             .route_layer(auth_middleware)
             .merge(create_login_route())
             .merge(auth_router.router())
-            .merge(create_logout_route("/logout"))
+            .merge(create_logout_route(
+                &self.config.website.pages.with_root().public_logout,
+            ))
             .layer(auth_layer)
     }
 }

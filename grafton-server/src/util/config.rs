@@ -87,6 +87,8 @@ pub struct Pages {
     pub public_error: String,
     #[derivative(Default(value = "\"login\".into()"))]
     pub public_login: String,
+    #[derivative(Default(value = "\"logout\".into()"))]
+    pub public_logout: String,
     #[derivative(Default(value = "\"protected\".into()"))]
     pub protected_home: String,
 }
@@ -100,6 +102,7 @@ impl Pages {
             public_home: join_paths(&normalized_base, &self.public_home),
             public_error: join_paths(&normalized_base, &self.public_error),
             public_login: join_paths(&normalized_base, &self.public_login),
+            public_logout: join_paths(&normalized_base, &self.public_logout),
             protected_home: join_paths(&normalized_base, &self.protected_home),
         }
     }
@@ -347,6 +350,7 @@ mod tests {
             public_home: "home".to_string(),
             public_error: "error".to_string(),
             public_login: "login".to_string(),
+            public_logout: "logout".to_string(),
             protected_home: "protected".to_string(),
         };
 
@@ -354,6 +358,7 @@ mod tests {
         assert_eq!(updated_pages_with_slash.public_home, "/api/home");
         assert_eq!(updated_pages_with_slash.public_error, "/api/error");
         assert_eq!(updated_pages_with_slash.public_login, "/api/login");
+        assert_eq!(updated_pages_with_slash.public_logout, "/api/logout");
         assert_eq!(updated_pages_with_slash.protected_home, "/api/protected");
 
         let pages_without_slash = Pages {
@@ -361,6 +366,7 @@ mod tests {
             public_home: "home".to_string(),
             public_error: "error".to_string(),
             public_login: "login".to_string(),
+            public_logout: "logout".to_string(),
             protected_home: "protected".to_string(),
         };
 
@@ -368,6 +374,7 @@ mod tests {
         assert_eq!(updated_pages_without_slash.public_home, "/api/home");
         assert_eq!(updated_pages_without_slash.public_error, "/api/error");
         assert_eq!(updated_pages_without_slash.public_login, "/api/login");
+        assert_eq!(updated_pages_without_slash.public_logout, "/api/logout");
         assert_eq!(updated_pages_without_slash.protected_home, "/api/protected");
     }
 
@@ -378,6 +385,7 @@ mod tests {
             public_home: String::new(),
             public_error: "/".to_string(),
             public_login: "/".to_string(),
+            public_logout: "/".to_string(),
             protected_home: "/".to_string(),
         };
 
@@ -385,6 +393,7 @@ mod tests {
         assert_eq!(updated_pages.public_home, "/");
         assert_eq!(updated_pages.public_error, "/");
         assert_eq!(updated_pages.public_login, "/");
+        assert_eq!(updated_pages.public_logout, "/");
         assert_eq!(updated_pages.protected_home, "/");
     }
 
@@ -485,6 +494,7 @@ mod tests {
             public_home: "home".to_string(),
             public_error: "/error".to_string(),
             public_login: "login".to_string(),
+            public_logout: "logout".to_string(),
             protected_home: "protected".to_string(),
         };
 
@@ -493,6 +503,7 @@ mod tests {
         assert_eq!(new_pages.public_home, "/api/home");
         assert_eq!(new_pages.public_error, "/api/error");
         assert_eq!(new_pages.public_login, "/api/login");
+        assert_eq!(new_pages.public_logout, "/api/logout");
         assert_eq!(new_pages.protected_home, "/api/protected");
     }
 
