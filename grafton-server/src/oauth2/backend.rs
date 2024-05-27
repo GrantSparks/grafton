@@ -62,6 +62,16 @@ impl Backend {
             },
         )
     }
+
+    pub async fn get_user_by_access_token(
+        &self,
+        access_token: &str,
+    ) -> Result<Option<User>, Error> {
+        let query = sqlx::query_as::<_, User>("select * from users where access_token = ?")
+            .bind(access_token);
+
+        query.fetch_optional(&self.db).await.map_err(Error::Sqlx)
+    }
 }
 
 #[async_trait]
@@ -128,19 +138,26 @@ impl AuthnBackend for Backend {
                 }
             }
 
+            let expires_in_seconds = token_res.expires_in().map(|d| {
+                let secs = d.as_secs();
+                i64::try_from(secs).unwrap_or(i64::MAX)
+            });
+
             let user = sqlx::query_as(
                 r"
-                insert into users (username, access_token, refresh_token)
-                values (?, ?, ?)
+                insert into users (username, access_token, refresh_token, expires_in)
+                values (?, ?, ?, ?)
                 on conflict(username) do update
                 set access_token = excluded.access_token,
-                    refresh_token = excluded.refresh_token
+                    refresh_token = excluded.refresh_token,
+                    expires_in = excluded.expires_in
                 returning *
                 ",
             )
             .bind(login_id)
             .bind(token_res.access_token().secret())
             .bind(token_res.refresh_token().map(oauth2::RefreshToken::secret))
+            .bind(expires_in_seconds)
             .fetch_one(&self.db)
             .await
             .map_err(Self::Error::Sqlx)?;

@@ -1,9 +1,10 @@
 -- Create users table.
-CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT NOT NULL UNIQUE,
-    access_token TEXT NOT NULL,
-    refresh_token TEXT,
+create table if not exists users (
+    id integer primary key autoincrement,
+    username text not null unique,
+    access_token text not null,
+    refresh_token text,
+    expires_in integer,
     role TEXT NOT NULL DEFAULT 'None'
 );
 -- Create indexes for efficient search
