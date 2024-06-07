@@ -34,7 +34,8 @@
         "rust-lang.rust-analyzer",
         "bpruitt-goddard.mermaid-markdown-syntax-highlighting",
         "bierner.markdown-mermaid",
-        "mtxr.sqltools"
+        "mtxr.sqltools",
+        "ms-toolsai.jupyter"
       ]
     }
   },
