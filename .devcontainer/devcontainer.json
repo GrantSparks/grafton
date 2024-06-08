@@ -35,7 +35,8 @@
         "bpruitt-goddard.mermaid-markdown-syntax-highlighting",
         "bierner.markdown-mermaid",
         "mtxr.sqltools",
-        "ms-toolsai.jupyter"
+        "ms-toolsai.jupyter",
+        "ms-python.python"
       ]
     }
   },
