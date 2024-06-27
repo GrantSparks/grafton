@@ -123,11 +123,11 @@ where
         &self,
         mut auth_session: AuthSession,
         Form(OpenAiAuthParams {
-            grant_type,
-            client_id,
-            client_secret,
+            grant_type: _,
+            client_id: _,
+            client_secret: _,
             code,
-            redirect_uri,
+            redirect_uri: _,
         }): Form<OpenAiAuthParams>,
     ) -> Result<impl IntoResponse, Error> {
         let provider: String = sqlx::query_scalar(
@@ -247,6 +247,8 @@ where
         }
     }
 
+    // Remove when completed
+    #[allow(clippy::unnecessary_wraps, clippy::unused_self)]
     pub fn refresh_token(&self, headers: &HeaderMap) -> Result<impl IntoResponse, Error> {
         debug!("refresh_token headers:");
         for (key, value) in headers {
