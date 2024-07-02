@@ -677,7 +677,7 @@ mod tests {
 
         assert_eq!(
             loaded_config_after_local_toml.get_grafton_config().run_mode,
-            "dev"
+            Some("dev".to_string())
         );
         assert_eq!(
             loaded_config_after_local_toml
