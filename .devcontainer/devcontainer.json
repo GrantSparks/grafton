@@ -36,7 +36,8 @@
         "bierner.markdown-mermaid",
         "mtxr.sqltools",
         "ms-toolsai.jupyter",
-        "ms-python.python"
+        "ms-python.python",
+        "DavidAnson.vscode-markdownlint"
       ]
     }
   },
