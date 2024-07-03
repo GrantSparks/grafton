@@ -45,9 +45,7 @@ tracing-appender = "*"
 tracing-subscriber = "*"
 typed-builder = "*"
 url = "2"
-
-[dependencies.grafton-config]
-path = "../grafton-config"
+grafton-config = "*"
 
 [dependencies.askama]
 features = ["with-axum"]

@@ -16,6 +16,7 @@ axum-yaml = "*"
 derivative = "2"
 indexmap = "2"
 openapiv3 = "*"
+grafton-config = "*"
 
 [dependencies.serde]
 version = "1"
@@ -26,6 +27,3 @@ version = "1"
 
 [dependencies.grafton-server]
 path = "../../grafton-server"
-
-[dependencies.grafton-config]
-path = "../../grafton-config"
