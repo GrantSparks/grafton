@@ -37,7 +37,8 @@
         "mtxr.sqltools",
         "ms-toolsai.jupyter",
         "ms-python.python",
-        "DavidAnson.vscode-markdownlint"
+        "DavidAnson.vscode-markdownlint",
+        "github.vscode-github-actions"
       ]
     }
   },
