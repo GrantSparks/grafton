@@ -1,4 +1,4 @@
 [workspace]
-default-members = ["grafton-auth", "examples/chatgpt-plugin"]
+default-members = ["examples/chatgpt-plugin"]
 resolver = "2"
-members = ["grafton-auth", "examples/chatgpt-plugin"]
+members = ["examples/chatgpt-plugin"]
