@@ -1,24 +1,17 @@
 use std::sync::Arc;
 
+use grafton_server::{
+    tracing::{debug, error},
+    Context, GraftonRouter, RouterFactory, Server, ServerConfigProvider,
+};
 use tower_http::{services::ServeDir, services::ServeFile};
 
-use crate::{
-    core::AxumRouter,
-    model::Context,
-    tracing::{debug, error},
-    web::ProtectedApp,
-    Error, ServerConfigProvider,
-};
+use crate::{web::ProtectedApp, AuthConfigProvider, Error};
 
 #[cfg(feature = "rbac")]
 use crate::rbac;
 
-use super::{
-    middleware::file::create_file_service, middleware::session::create_session_layer,
-    server::Server,
-};
-
-type RouterFactory<C> = dyn FnOnce(&Arc<Context<C>>) -> AxumRouter<C> + Send + 'static;
+use super::{middleware::file::create_file_service, middleware::session::create_session_layer};
 
 type FallbackServiceFactory<C> =
     dyn FnOnce(&Arc<Context<C>>) -> Result<ServeDir<ServeFile>, Error> + Send + 'static;
@@ -35,7 +28,7 @@ where
 
 impl<C> Builder<C>
 where
-    C: ServerConfigProvider,
+    C: ServerConfigProvider + AuthConfigProvider,
 {
     /// # Errors
     ///
@@ -46,14 +39,11 @@ where
         let context = {
             #[cfg(feature = "rbac")]
             {
-                // You'll need to modify `rbac::initialize` and `Context::new` to accept a generic config
-                let oso = rbac::initialize(config.get_server_config())?;
-                Context::new(config, oso)
+                // TODO: Oso has to be stored somewhere so that it can be used in the middleware
+                let _oso = rbac::initialize(config.get_auth_config())?;
             }
-            #[cfg(not(feature = "rbac"))]
-            {
-                Context::new(config)
-            }
+
+            Context::new(config)
         };
 
         let context = Arc::new(context);
@@ -69,7 +59,7 @@ where
     #[must_use]
     pub fn with_unprotected_router<F>(mut self, factory: F) -> Self
     where
-        F: FnOnce(&Arc<Context<C>>) -> AxumRouter<C> + Send + 'static,
+        F: FnOnce(&Arc<Context<C>>) -> GraftonRouter<C> + Send + 'static,
     {
         self.unprotected_router_factory = Some(Box::new(factory));
         self
@@ -78,7 +68,7 @@ where
     #[must_use]
     pub fn with_protected_router<F>(mut self, factory: F) -> Self
     where
-        F: FnOnce(&Arc<Context<C>>) -> AxumRouter<C> + Send + 'static,
+        F: FnOnce(&Arc<Context<C>>) -> GraftonRouter<C> + Send + 'static,
     {
         self.protected_router_factory = Some(Box::new(factory));
         self
@@ -124,7 +114,7 @@ where
         let file_service = if let Some(factory) = self.fallback_service_factory {
             factory(&app_ctx)?
         } else {
-            let fallback_file_path = app_ctx.config.get_server_config().website.web_root.clone();
+            let fallback_file_path = app_ctx.config.get_auth_config().web_root.clone();
             let default_serve_file = ServeFile::new(&fallback_file_path);
 
             create_file_service(&app_ctx).unwrap_or_else(|e| {

@@ -11,7 +11,7 @@ use {
     sqlx::SqlitePool,
 };
 
-use crate::{
+use grafton_server::{
     axum::{
         body::Body,
         extract::OriginalUri,
@@ -19,40 +19,42 @@ use crate::{
         middleware::{from_fn, Next},
         response::Redirect,
     },
-    core::AxumRouter,
-    error::Error,
-    model::Context,
-    oauth2::backend::Backend,
     tracing::{debug, error, info},
+    Context, GraftonRouter, ServerConfigProvider,
+};
+
+use crate::{
+    error::Error,
+    oauth2::backend::Backend,
     web::router::{auth, create_login_route, protected},
-    AuthSession, Config, ServerConfigProvider,
+    AuthConfigProvider, AuthSession, Config,
 };
 
 pub struct ProtectedApp<C>
 where
-    C: ServerConfigProvider,
+    C: AuthConfigProvider + ServerConfigProvider,
 {
     db: SqlitePool,
     oauth_providers: HashMap<String, BasicClient>,
     session_layer: SessionManagerLayer<MemoryStore>,
     login_url: String,
-    protected_router: Option<AxumRouter<C>>,
+    protected_router: Option<GraftonRouter<C>>,
     protected_route: String,
     config: Config,
 }
 
 impl<C> ProtectedApp<C>
 where
-    C: ServerConfigProvider,
+    C: AuthConfigProvider + ServerConfigProvider,
 {
     pub async fn new(
         app_ctx: Arc<Context<C>>,
         session_layer: SessionManagerLayer<MemoryStore>,
-        protected_router: Option<AxumRouter<C>>,
+        protected_router: Option<GraftonRouter<C>>,
     ) -> Result<Self, Error> {
         let mut oauth_providers = HashMap::new();
 
-        for (client_name, client_config) in &app_ctx.config.get_server_config().oauth_providers {
+        for (client_name, client_config) in &app_ctx.config.get_auth_config().oauth_providers {
             debug!("Configuring oauth client: {}", client_name);
             let client_id = client_config.client_id.clone();
             let client_secret = client_config.client_secret.clone();
@@ -89,25 +91,23 @@ where
             session_layer,
             login_url: app_ctx
                 .config
-                .get_server_config()
-                .website
+                .get_auth_config()
                 .routes
                 .with_root()
                 .public_login,
             protected_router,
             protected_route: app_ctx
                 .config
-                .get_server_config()
-                .website
+                .get_auth_config()
                 .routes
                 .with_root()
                 .protected_home,
-            config: app_ctx.config.get_server_config().clone(),
+            config: app_ctx.config.get_auth_config().clone(),
         })
     }
 
     #[allow(clippy::cognitive_complexity)]
-    pub fn create_auth_router(self) -> AxumRouter<C> {
+    pub fn create_auth_router(self) -> GraftonRouter<C> {
         debug!("Creating auth router");
         // Auth service.
         //

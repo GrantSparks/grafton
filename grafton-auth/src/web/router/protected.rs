@@ -1,9 +1,8 @@
 use askama::Template;
 
-use crate::{
+use grafton_server::{
     axum::{routing::get, Router},
-    core::AxumRouter,
-    ServerConfigProvider,
+    GraftonRouter, ServerConfigProvider,
 };
 
 #[derive(Template)]
@@ -12,7 +11,7 @@ struct ProtectedTemplate<'a> {
     username: &'a str,
 }
 
-pub fn router<C>(protected_home: &str) -> AxumRouter<C>
+pub fn router<C>(protected_home: &str) -> GraftonRouter<C>
 where
     C: ServerConfigProvider,
 {
@@ -21,17 +20,14 @@ where
 
 mod get {
 
-    use crate::{
-        axum::{extract::State, http::StatusCode, response::IntoResponse},
-        AuthSession, Config,
-    };
+    use grafton_server::axum::response::IntoResponse;
+    use hyper::StatusCode;
+
+    use crate::AuthSession;
 
     use super::ProtectedTemplate;
 
-    pub async fn protected(
-        State(_config): State<Config>,
-        auth_session: AuthSession,
-    ) -> impl IntoResponse {
+    pub async fn protected(auth_session: AuthSession) -> impl IntoResponse {
         match auth_session.user {
             Some(user) => ProtectedTemplate {
                 username: &user.username,

@@ -4,10 +4,9 @@ use {
     sqlx::FromRow,
 };
 
+use grafton_server::new_secret_type;
 #[cfg(feature = "rbac")]
 use strum::{Display, EnumString, VariantNames};
-
-use crate::new_secret_type;
 
 use super::Identifiable;
 

@@ -17,19 +17,23 @@ use {
     url::Url,
 };
 
-use crate::{
+use grafton_server::{
     axum::{
         extract::{Form, Path, Query},
         response::{IntoResponse, Json, Redirect},
         routing::{get, post},
         Router,
     },
+    tracing::{debug, error, warn},
+    GraftonRouter, ServerConfigProvider,
+};
+
+use crate::{
     oauth2::{
         AuthzReq, AuthzResp, Credentials, NextOrAuthzReq, NextUrl, OpenAiAuthParams,
         CSRF_STATE_KEY, NEXT_URL_KEY,
     },
-    tracing::{debug, error, warn},
-    AuthSession, AxumRouter, Config, Error, ServerConfigProvider,
+    AuthSession, Config, Error,
 };
 
 #[derive(TypedBuilder)]
@@ -241,9 +245,7 @@ where
                 let url_str = url.to_string();
                 Ok(Redirect::to(&url_str).into_response())
             }
-            _ => Ok(
-                Redirect::to(&self.config.website.routes.with_root().public_login).into_response(),
-            ),
+            _ => Ok(Redirect::to(&self.config.routes.with_root().public_login).into_response()),
         }
     }
 
@@ -268,7 +270,7 @@ where
         Ok(Json(response_body))
     }
 
-    pub fn router(self) -> AxumRouter<C> {
+    pub fn router(self) -> GraftonRouter<C> {
         let this = std::sync::Arc::new(self);
         Router::new()
             .route(

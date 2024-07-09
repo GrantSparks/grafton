@@ -13,7 +13,9 @@ use {
     sqlx::SqlitePool,
 };
 
-use crate::{axum::async_trait, model::User, Error};
+use grafton_server::axum::async_trait;
+
+use crate::{model::User, Error};
 
 use super::Credentials;
 

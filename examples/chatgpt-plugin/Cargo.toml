@@ -26,4 +26,7 @@ features = ["full"]
 version = "1"
 
 [dependencies.grafton-server]
-path = "../../grafton-server"
+path = "../../../grafton-server"
+
+[dependencies.grafton-auth]
+path = "../../grafton-auth"

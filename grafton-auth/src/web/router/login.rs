@@ -1,15 +1,15 @@
 use {askama::Template, askama_axum::IntoResponse};
 
-use crate::{
+use grafton_server::{
     axum::{
         extract::Path,
         routing::{get, post},
     },
-    core::AxumRouter,
-    oauth2::NextUrl,
     tracing::error,
-    Config, ServerConfigProvider,
+    GraftonRouter, ServerConfigProvider,
 };
+
+use crate::{oauth2::NextUrl, AuthConfigProvider, Config};
 
 #[derive(Template)]
 #[template(path = "login.html")]
@@ -19,11 +19,11 @@ pub struct Login {
     pub provider_name: String,
 }
 
-pub fn router<C>() -> AxumRouter<C>
+pub fn router<C>() -> GraftonRouter<C>
 where
-    C: ServerConfigProvider,
+    C: ServerConfigProvider + AuthConfigProvider,
 {
-    AxumRouter::new()
+    GraftonRouter::new()
         .route("/login/:provider", post(self::post::login))
         .route("/login/:provider", get(self::get::login))
 }
@@ -32,8 +32,9 @@ mod post {
 
     use axum_login::tower_sessions::Session;
 
+    use grafton_server::axum::{extract::State, response::Redirect, Form};
+
     use crate::{
-        axum::{extract::State, response::Redirect, Form},
         oauth2::{CSRF_STATE_KEY, NEXT_URL_KEY},
         AuthSession, Error,
     };
@@ -78,10 +79,9 @@ mod post {
 
 mod get {
 
-    use crate::{
-        axum::extract::{Query, State},
-        Error,
-    };
+    use grafton_server::axum::extract::{Query, State};
+
+    use crate::Error;
 
     use super::{Config, IntoResponse, Login, NextUrl, Path};
 

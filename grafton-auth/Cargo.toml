@@ -1,5 +1,5 @@
 [package]
-name = "grafton-server"
+name = "grafton-auth"
 version = "0.1.0"
 authors = ["Grant Sparks <grant@grafton.ai>"]
 edition = "2021"
@@ -46,6 +46,7 @@ tracing-subscriber = "*"
 typed-builder = "*"
 url = "2"
 grafton-config = "*"
+grafton-server = { path = "../../grafton-server" }
 
 [dependencies.askama]
 features = ["with-axum"]

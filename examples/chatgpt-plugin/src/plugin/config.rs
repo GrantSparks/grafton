@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use grafton_auth::{AuthConfigProvider, Config as AuthConfig};
+
 use crate::AppContext;
 
 use {
@@ -70,12 +72,18 @@ pub struct ChatGptPlugin {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Config {
     #[serde(flatten)]
-    pub base: ServerConfig,
+    pub base: AuthConfig,
     pub chatgpt_plugin: ChatGptPlugin,
 }
 
 impl ServerConfigProvider for Config {
     fn get_server_config(&self) -> &ServerConfig {
+        self.base.get_server_config()
+    }
+}
+
+impl AuthConfigProvider for Config {
+    fn get_auth_config(&self) -> &AuthConfig {
         &self.base
     }
 }

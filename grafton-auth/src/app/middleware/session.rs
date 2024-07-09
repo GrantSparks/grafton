@@ -3,7 +3,7 @@ use {
     time::Duration,
 };
 
-use crate::tracing::debug;
+use grafton_server::tracing::debug;
 
 pub fn create_session_layer() -> SessionManagerLayer<MemoryStore> {
     debug!("Creating session layer");

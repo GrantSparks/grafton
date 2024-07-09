@@ -1,20 +1,11 @@
 use std::sync::Arc;
 
-use grafton_server::{
-    axum::{routing::get, Router},
-    ServerConfigProvider as _,
-};
+use grafton_server::axum::{routing::get, Router};
 
 use crate::{AppContext, AppRouter};
 
 pub fn build_todos_router(app_ctx: &Arc<AppContext>) -> AppRouter {
-    let protected_home = &app_ctx
-        .config
-        .get_server_config()
-        .website
-        .routes
-        .with_root()
-        .protected_home;
+    let protected_home = &app_ctx.config.base.routes.with_root().protected_home;
 
     Router::new().route(protected_home, get(self::get::plugin_handler))
 }
