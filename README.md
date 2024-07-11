@@ -32,7 +32,7 @@ The Grafton Machine Shed API server repository is dual-licensed, offering both o
 
 Unless explicitly stated otherwise, all files in this repository are licensed under the Apache License 2.0. The full text of the license can be found in the [LICENSE](LICENSE) file.
 
-#### Key Features of the Apache License 2.0:
+#### Key Features of the Apache License 2.0
 
 - **Permissive License**: Enables free commercial and non-commercial use, distribution, and modification of the software without requiring source code access. Allows combining with other open source licenses.
 
@@ -44,7 +44,7 @@ Unless explicitly stated otherwise, all files in this repository are licensed un
 
 For those wishing to integrate the Grafton Machine Shed server into closed-source applications, or who need more flexibility than the Apache License 2.0 allows, a commercial license is available. This license permits private modifications and proprietary integration.
 
-#### Benefits of the Commercial License:
+#### Benefits of the Commercial License
 
 - **Use in Proprietary Applications**: Integrate the Grafton Machine Shed server seamlessly into closed-source applications.
 - **Flexibility and Freedom**: Greater flexibility in the use, modification, and distribution of the project.
