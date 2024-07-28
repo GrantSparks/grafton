@@ -29,7 +29,6 @@
       "extensions": [
         "eamodio.gitlens",
         "vadimcn.vscode-lldb",
-        "serayuzgur.crates",
         "tamasfe.even-better-toml",
         "rust-lang.rust-analyzer",
         "bpruitt-goddard.mermaid-markdown-syntax-highlighting",
@@ -38,7 +37,8 @@
         "ms-toolsai.jupyter",
         "ms-python.python",
         "DavidAnson.vscode-markdownlint",
-        "github.vscode-github-actions"
+        "github.vscode-github-actions",
+        "fill-labs.dependi"
       ]
     }
   },
